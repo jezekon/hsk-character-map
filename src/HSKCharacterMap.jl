@@ -4,7 +4,7 @@
 HSK Character Map - Complete Julia Implementation
 
 Creates a Chinese-English graphical dictionary for Obsidian by analyzing HSK vocabulary
-and generating character relationship connections with HSK level tagging.
+and generating character relationship connections with complete meaning aggregation.
 
 Usage:
 julia main.jl
@@ -15,6 +15,7 @@ Features:
   - User selection of HSK levels to import
   - Choice between traditional and simplified characters
   - Generates Obsidian-compatible markdown files with HSK level tags
+  - Aggregates ALL meanings for each character from all word contexts
   - Creates character relationship graph
 """
 module HSKCharacterMap
@@ -33,8 +34,20 @@ struct ChineseWord
   pinyin::String
   pinyin_clean::String
   meaning::String
+  all_meanings::Vector{String}  # Store all meanings for this word
   characters::Vector{String}
-  hsk_level::Int  # Added HSK level tracking
+  hsk_level::Int
+end
+
+"""
+    CharacterMeanings
+
+Aggregates all meanings for a specific character across all words.
+"""
+struct CharacterMeanings
+  character::String
+  all_meanings::Vector{String}
+  hsk_levels::Vector{Int}
 end
 
 """
@@ -212,12 +225,12 @@ end
     parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int) -> Union{ChineseWord, Nothing}
 
 Parse a single HSK word entry from JSON data into a ChineseWord struct with HSK level.
+Now extracts ALL meanings from the word data.
 """
 function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
   try
     simplified = word_data["simplified"]
 
-    # Get the first form (there might be multiple)
     if !haskey(word_data, "forms") || isempty(word_data["forms"])
       return nothing
     end
@@ -231,15 +244,13 @@ function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
     if isempty(meanings)
       return nothing
     end
-    meaning = meanings[1]
 
-    # Create clean pinyin for filename
+    # Store all meanings and use first one as primary
+    all_meanings = copy(meanings)
+    primary_meaning = meanings[1]
+
     pinyin_clean = clean_pinyin(pinyin)
-
-    # Choose character set based on user preference
     main_characters = character_type == "simplified" ? simplified : traditional
-
-    # Split into individual characters
     characters = split_into_characters(main_characters)
 
     return ChineseWord(
@@ -247,7 +258,8 @@ function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
       traditional,
       pinyin,
       pinyin_clean,
-      meaning,
+      primary_meaning,
+      all_meanings,
       characters,
       hsk_level
     )
@@ -255,6 +267,43 @@ function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
   catch e
     return nothing
   end
+end
+
+"""
+    build_character_meanings_map(words::Vector{ChineseWord}, character_type::String) -> Dict{String, CharacterMeanings}
+
+Build a comprehensive mapping of each character to all its meanings across all words.
+This aggregates meanings from different words that contain the same character.
+"""
+function build_character_meanings_map(words::Vector{ChineseWord}, character_type::String)
+  char_meanings_map = Dict{String, CharacterMeanings}()
+
+  println("Building character meanings map...")
+
+  for word in words
+    # Use the appropriate character set
+    word_chars = character_type == "simplified" ? word.simplified : word.traditional
+
+    # Process each character in this word
+    for char in split_into_characters(word_chars)
+      if haskey(char_meanings_map, char)
+        # Character already exists, merge meanings and levels
+        existing = char_meanings_map[char]
+        new_meanings = union(existing.all_meanings, word.all_meanings)
+        new_levels = union(existing.hsk_levels, [word.hsk_level])
+
+        char_meanings_map[char] =
+          CharacterMeanings(char, collect(new_meanings), sort(collect(new_levels)))
+      else
+        # First time seeing this character
+        char_meanings_map[char] =
+          CharacterMeanings(char, copy(word.all_meanings), [word.hsk_level])
+      end
+    end
+  end
+
+  println("Mapped meanings for $(length(char_meanings_map)) unique characters")
+  return char_meanings_map
 end
 
 """
@@ -299,18 +348,46 @@ function find_character_connections(
 end
 
 """
-    create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String) -> String
+    create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String, char_meanings_map::Dict{String, CharacterMeanings}) -> String
 
-Create markdown content for a word file with HSK level tag on first line.
+Create markdown content for a word file with HSK level tag and enhanced meanings.
 """
 function create_markdown_content(
   word::ChineseWord,
   connections::Vector{String},
-  character_type::String
+  character_type::String,
+  char_meanings_map::Dict{String, CharacterMeanings}
 )
+  main_chars = character_type == "simplified" ? word.simplified : word.traditional
+
   # First line: HSK level tag
   hsk_tag = "#hsk$(word.hsk_level)"
-  content = "$(hsk_tag)\n$(word.meaning)"
+  content = "$(hsk_tag)\n"
+
+  # Second line: Traditional Chinese characters
+  # content *= "$(word.traditional)\n"
+
+  # Third line: Primary meaning
+  content *= "$(word.meaning)"
+
+  # If this is a single character, show all its aggregated meanings
+  if length(word.characters) == 1 && haskey(char_meanings_map, main_chars)
+    char_meanings = char_meanings_map[main_chars]
+    if length(char_meanings.all_meanings) > 1
+      content *= "\n\n### Meanings:\n"
+      for meaning in char_meanings.all_meanings
+        content *= "$meaning\n"
+      end
+    end
+  end
+
+  # Add word meanings if it's a multi-character word with multiple meanings
+  if length(word.characters) > 1 && length(word.all_meanings) > 1
+    content *= "\n\n### Word meanings:\n"
+    for meaning in word.all_meanings
+      content *= "$meaning\n"
+    end
+  end
 
   # Add connections if any exist
   if !isempty(connections)
@@ -329,6 +406,7 @@ end
     create_obsidian_vault(words::Vector{ChineseWord}, character_type::String, output_dir::String = "ObsidianVault") -> Int
 
 Create Obsidian vault with markdown files for all words and their character connections.
+Enhanced to include comprehensive character meanings.
 """
 function create_obsidian_vault(
   words::Vector{ChineseWord},
@@ -341,17 +419,15 @@ function create_obsidian_vault(
     println("Created directory: $output_dir")
   end
 
+  # Build comprehensive character meanings map
+  char_meanings_map = build_character_meanings_map(words, character_type)
+
   println("Generating markdown files...")
   files_created = 0
 
   for word in words
-    # Find character connections
     connections = find_character_connections(word, words, character_type)
-
-    # Create markdown content
-    content = create_markdown_content(word, connections, character_type)
-
-    # Create filename
+    content = create_markdown_content(word, connections, character_type, char_meanings_map)
     filename = create_filename(word, character_type)
     filepath = joinpath(output_dir, filename)
 
