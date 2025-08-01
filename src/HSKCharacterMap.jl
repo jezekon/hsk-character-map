@@ -4,7 +4,7 @@
 HSK Character Map - Complete Julia Implementation
 
 Creates a Chinese-English graphical dictionary for Obsidian by analyzing HSK vocabulary
-and generating character relationship connections.
+and generating character relationship connections with HSK level tagging.
 
 Usage:
 julia main.jl
@@ -14,7 +14,7 @@ Features:
   - Support for HSK levels 1-7
   - User selection of HSK levels to import
   - Choice between traditional and simplified characters
-  - Generates Obsidian-compatible markdown files
+  - Generates Obsidian-compatible markdown files with HSK level tags
   - Creates character relationship graph
 """
 module HSKCharacterMap
@@ -25,7 +25,7 @@ using JSON
 """
     ChineseWord
 
-Represents a Chinese word with all its linguistic information.
+Represents a Chinese word with all its linguistic information including HSK level.
 """
 struct ChineseWord
   simplified::String
@@ -34,6 +34,7 @@ struct ChineseWord
   pinyin_clean::String
   meaning::String
   characters::Vector{String}
+  hsk_level::Int  # Added HSK level tracking
 end
 
 """
@@ -128,17 +129,20 @@ function load_hsk_data(level::Int)
 end
 
 """
-    load_selected_hsk_data(levels::Vector{Int}) -> Vector{Dict}
+    load_selected_hsk_data(levels::Vector{Int}) -> Vector{Tuple{Dict, Int}}
 
-Load HSK data from selected levels.
+Load HSK data from selected levels, tracking which level each word came from.
+Returns tuples of (word_data, hsk_level).
 """
 function load_selected_hsk_data(levels::Vector{Int})
-  all_data = Dict[]
+  all_data = Tuple{Dict, Int}[]
 
   for level in levels
     try
       level_data = load_hsk_data(level)
-      append!(all_data, level_data)
+      # Create tuples of (word_data, level) to track origin
+      level_tuples = [(word_data, level) for word_data in level_data]
+      append!(all_data, level_tuples)
       println("Loaded $(length(level_data)) words from HSK level $level")
     catch e
       println("Warning: Could not load HSK level $level: $e")
@@ -205,11 +209,11 @@ function split_into_characters(word::String)
 end
 
 """
-    parse_hsk_word(word_data::Dict, character_type::String) -> Union{ChineseWord, Nothing}
+    parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int) -> Union{ChineseWord, Nothing}
 
-Parse a single HSK word entry from JSON data into a ChineseWord struct.
+Parse a single HSK word entry from JSON data into a ChineseWord struct with HSK level.
 """
-function parse_hsk_word(word_data::Dict, character_type::String)
+function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
   try
     simplified = word_data["simplified"]
 
@@ -238,7 +242,15 @@ function parse_hsk_word(word_data::Dict, character_type::String)
     # Split into individual characters
     characters = split_into_characters(main_characters)
 
-    return ChineseWord(simplified, traditional, pinyin, pinyin_clean, meaning, characters)
+    return ChineseWord(
+      simplified,
+      traditional,
+      pinyin,
+      pinyin_clean,
+      meaning,
+      characters,
+      hsk_level
+    )
 
   catch e
     return nothing
@@ -289,15 +301,16 @@ end
 """
     create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String) -> String
 
-Create markdown content for a word file.
+Create markdown content for a word file with HSK level tag on first line.
 """
 function create_markdown_content(
   word::ChineseWord,
   connections::Vector{String},
   character_type::String
 )
-  main_chars = character_type == "simplified" ? word.simplified : word.traditional
-  content = "$(main_chars)\n$(word.meaning)"
+  # First line: HSK level tag
+  hsk_tag = "#hsk$(word.hsk_level)"
+  content = "$(hsk_tag)\n$(word.meaning)"
 
   # Add connections if any exist
   if !isempty(connections)
@@ -365,15 +378,15 @@ end
 """
     process_hsk_data(levels::Vector{Int}, character_type::String) -> Vector{ChineseWord}
 
-Main function to load and process selected HSK data.
+Main function to load and process selected HSK data with HSK level tracking.
 """
 function process_hsk_data(levels::Vector{Int}, character_type::String)
   println("Starting HSK Character Map generation...")
 
-  # Load selected HSK data
-  raw_data = load_selected_hsk_data(levels)
+  # Load selected HSK data with level tracking
+  raw_data_with_levels = load_selected_hsk_data(levels)
 
-  if isempty(raw_data)
+  if isempty(raw_data_with_levels)
     throw(ErrorException("No HSK data could be loaded. Please check data files."))
   end
 
@@ -382,8 +395,8 @@ function process_hsk_data(levels::Vector{Int}, character_type::String)
   words = ChineseWord[]
   skipped = 0
 
-  for word_data in raw_data
-    parsed_word = parse_hsk_word(word_data, character_type)
+  for (word_data, hsk_level) in raw_data_with_levels
+    parsed_word = parse_hsk_word(word_data, character_type, hsk_level)
     if parsed_word !== nothing
       push!(words, parsed_word)
     else
