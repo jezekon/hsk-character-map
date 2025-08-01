@@ -1,10 +1,12 @@
 #!/usr/bin/env julia
 
 """
-HSK Character Map - Complete Julia Implementation
+HSK Character Map - Enhanced Julia Implementation
 
 Creates a Chinese-English graphical dictionary for Obsidian by analyzing HSK vocabulary
 and generating character relationship connections with complete meaning aggregation.
+
+Enhanced with proper link management to avoid duplicate files and broken links.
 
 Usage:
 julia main.jl
@@ -17,6 +19,7 @@ Features:
   - Generates Obsidian-compatible markdown files with HSK level tags
   - Aggregates ALL meanings for each character from all word contexts
   - Creates character relationship graph
+  - **NEW**: Proper standalone character detection to avoid broken links
 """
 module HSKCharacterMap
 
@@ -48,6 +51,19 @@ struct CharacterMeanings
   character::String
   all_meanings::Vector{String}
   hsk_levels::Vector{Int}
+end
+
+# **NEW**: Enhanced character info for proper link management
+"""
+    CharacterInfo
+
+Enhanced character information including standalone word detection.
+"""
+struct CharacterInfo
+  character::String
+  is_standalone_word::Bool
+  filename::String
+  meanings::CharacterMeanings
 end
 
 """
@@ -126,7 +142,7 @@ end
 """
     load_hsk_data(level::Int) -> Vector{Dict}
 
-Load HSK data from JSON file for specified level (1-7).
+Load HSK data for a specific level from JSON file.
 """
 function load_hsk_data(level::Int)
   if level < 1 || level > 7
@@ -144,8 +160,7 @@ end
 """
     load_selected_hsk_data(levels::Vector{Int}) -> Vector{Tuple{Dict, Int}}
 
-Load HSK data from selected levels, tracking which level each word came from.
-Returns tuples of (word_data, hsk_level).
+Load and combine HSK data for selected levels with level tracking.
 """
 function load_selected_hsk_data(levels::Vector{Int})
   all_data = Tuple{Dict, Int}[]
@@ -153,29 +168,28 @@ function load_selected_hsk_data(levels::Vector{Int})
   for level in levels
     try
       level_data = load_hsk_data(level)
-      # Create tuples of (word_data, level) to track origin
       level_tuples = [(word_data, level) for word_data in level_data]
       append!(all_data, level_tuples)
-      println("Loaded $(length(level_data)) words from HSK level $level")
+      println("Loaded HSK level $level: $(length(level_data)) words")
     catch e
       println("Warning: Could not load HSK level $level: $e")
     end
   end
 
-  println("Total words loaded: $(length(all_data))")
+  println("Total: $(length(all_data)) words")
   return all_data
 end
 
 """
     clean_pinyin(pinyin::String) -> String
 
-Remove spaces, punctuation, and tone marks from pinyin for use in filenames.
+Remove tone marks and special characters from pinyin for use in filenames.
 """
 function clean_pinyin(pinyin::String)
-  # Remove spaces and common punctuation
+  # Remove punctuation and spaces
   cleaned = replace(pinyin, r"[\s\.,;:!?\-()]" => "")
 
-  # Remove tone marks - mapping accented characters to base characters
+  # Define tone mark to base character mapping
   tone_map = Dict(
     'ā' => 'a',
     'á' => 'a',
@@ -306,6 +320,49 @@ function build_character_meanings_map(words::Vector{ChineseWord}, character_type
   return char_meanings_map
 end
 
+# **NEW**: Enhanced character info mapping for proper link management
+"""
+    build_character_info_map(words::Vector{ChineseWord}, character_type::String) -> Dict{String, CharacterInfo}
+
+Build comprehensive character information map with proper standalone word detection.
+This prevents duplicate files and broken links.
+"""
+function build_character_info_map(words::Vector{ChineseWord}, character_type::String)
+  char_info_map = Dict{String, CharacterInfo}()
+
+  # Build character meanings map first (reuse existing function)
+  char_meanings_map = build_character_meanings_map(words, character_type)
+
+  # Create word lookup for fast standalone character detection
+  word_lookup = Set{String}()
+  word_to_word_map = Dict{String, ChineseWord}()
+
+  for word in words
+    lookup_chars = character_type == "simplified" ? word.simplified : word.traditional
+    push!(word_lookup, lookup_chars)
+    word_to_word_map[lookup_chars] = word
+  end
+
+  # Process each character and determine if it's a standalone word
+  for (char, char_meanings) in char_meanings_map
+    is_standalone = char in word_lookup
+
+    filename = if is_standalone
+      standalone_word = word_to_word_map[char]
+      create_filename(standalone_word, character_type)
+    else
+      "$char.md"  # Simple filename for non-standalone characters
+    end
+
+    char_info_map[char] = CharacterInfo(char, is_standalone, filename, char_meanings)
+  end
+
+  standalone_count = count(info -> info.is_standalone_word, values(char_info_map))
+  println("Mapped $(length(char_info_map)) characters ($standalone_count standalone)")
+
+  return char_info_map
+end
+
 """
     create_filename(word::ChineseWord, character_type::String) -> String
 
@@ -347,6 +404,29 @@ function find_character_connections(
   return connections
 end
 
+# **NEW**: Enhanced link generation for proper character references
+"""
+    get_character_link(char::String, char_info_map::Dict{String, CharacterInfo}) -> String
+
+Get the proper Obsidian link for a character, using the correct filename.
+"""
+function get_character_link(char::String, char_info_map::Dict{String, CharacterInfo})
+  if haskey(char_info_map, char)
+    char_info = char_info_map[char]
+    if char_info.is_standalone_word
+      # Link to the full word file (without .md extension)
+      link_name = replace(char_info.filename, ".md" => "")
+      return "[[$(link_name)]]"
+    else
+      # Link to simple character file
+      return "[[$(char)]]"
+    end
+  else
+    # Fallback - simple character link
+    return "[[$(char)]]"
+  end
+end
+
 """
     create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String, char_meanings_map::Dict{String, CharacterMeanings}) -> String
 
@@ -383,7 +463,7 @@ function create_markdown_content(
 
   # Add word meanings if it's a multi-character word with multiple meanings
   if length(word.characters) > 1 && length(word.all_meanings) > 1
-    content *= "\n\n### Word meanings:\n"
+    content *= "\n\n### Word Meanings:\n"
     for meaning in word.all_meanings
       content *= "$meaning\n"
     end
@@ -402,11 +482,100 @@ function create_markdown_content(
   return content
 end
 
+# **NEW**: Enhanced markdown content creation with proper character links
+"""
+    create_enhanced_markdown_content(word::ChineseWord, char_info_map::Dict{String, CharacterInfo}, character_type::String) -> String
+
+Create markdown content with enhanced character links to avoid broken references.
+"""
+function create_enhanced_markdown_content(
+  word::ChineseWord,
+  char_info_map::Dict{String, CharacterInfo},
+  character_type::String
+)
+  # HSK level tag
+  content = "#hsk$(word.hsk_level)\n"
+
+  # Primary meaning
+  content *= "$(word.meaning)"
+
+  # Add all meanings if multiple exist
+  if length(word.all_meanings) > 1
+    content *= "\n\n### All meanings:\n"
+    for meaning in word.all_meanings
+      content *= "- $meaning\n"
+    end
+  end
+
+  # Add character components with proper links
+  main_chars = character_type == "simplified" ? word.simplified : word.traditional
+  characters = split_into_characters(main_chars)
+
+  if length(characters) > 1  # Only show components for multi-character words
+    content *= "\n\n## Character Components\n"
+    for char in characters
+      link = get_character_link(char, char_info_map)
+      if haskey(char_info_map, char)
+        char_info = char_info_map[char]
+        if char_info.is_standalone_word
+          content *= "- $link (standalone word)\n"
+        else
+          content *= "- $link (character component)\n"
+        end
+      else
+        content *= "- $link\n"
+      end
+    end
+  end
+
+  return content
+end
+
+# **NEW**: Create content for non-standalone character files
+"""
+    create_character_markdown_content(char_info::CharacterInfo) -> String
+
+Create markdown content for a character-only file (characters not found as standalone words).
+"""
+function create_character_markdown_content(char_info::CharacterInfo)
+  content = "*Note: This character does not appear as a standalone word in the selected HSK levels.*\n\n"
+  return content
+end
+
+# **NEW**: Cleanup orphaned files
+"""
+    cleanup_orphaned_files(output_dir::String, valid_filenames::Set{String})
+
+Remove any files that shouldn't exist (like empty character files when full files exist).
+"""
+function cleanup_orphaned_files(output_dir::String, valid_filenames::Set{String})
+  if !isdir(output_dir)
+    return
+  end
+
+  removed_count = 0
+  for filename in readdir(output_dir)
+    if endswith(filename, ".md") && !(filename in valid_filenames)
+      filepath = joinpath(output_dir, filename)
+      try
+        rm(filepath)
+        removed_count += 1
+      catch e
+        # Silent cleanup
+      end
+    end
+  end
+
+  if removed_count > 0
+    println("Removed $removed_count orphaned files")
+  end
+end
+
 """
     create_obsidian_vault(words::Vector{ChineseWord}, character_type::String, output_dir::String = "ObsidianVault") -> Int
 
 Create Obsidian vault with markdown files for all words and their character connections.
-Enhanced to include comprehensive character meanings.
+Enhanced to include comprehensive character meanings and proper link management.
 """
 function create_obsidian_vault(
   words::Vector{ChineseWord},
@@ -419,17 +588,24 @@ function create_obsidian_vault(
     println("Created directory: $output_dir")
   end
 
-  # Build comprehensive character meanings map
+  # **NEW**: Build enhanced character info map for proper link management
+  char_info_map = build_character_info_map(words, character_type)
+
+  # Also build original character meanings map for backward compatibility
   char_meanings_map = build_character_meanings_map(words, character_type)
 
   println("Generating markdown files...")
   files_created = 0
+  valid_filenames = Set{String}()
 
+  # Generate files for all words (including standalone characters)
   for word in words
-    connections = find_character_connections(word, words, character_type)
-    content = create_markdown_content(word, connections, character_type, char_meanings_map)
+    # **NEW**: Use enhanced content creation with proper character links
+    content = create_enhanced_markdown_content(word, char_info_map, character_type)
     filename = create_filename(word, character_type)
     filepath = joinpath(output_dir, filename)
+
+    push!(valid_filenames, filename)
 
     # Write file
     try
@@ -446,6 +622,29 @@ function create_obsidian_vault(
       println("Warning: Could not create file $filename: $e")
     end
   end
+
+  # **NEW**: Generate files for characters that are NOT standalone words
+  for (char, char_info) in char_info_map
+    if !char_info.is_standalone_word
+      content = create_character_markdown_content(char_info)
+      filename = char_info.filename
+      filepath = joinpath(output_dir, filename)
+
+      push!(valid_filenames, filename)
+
+      try
+        open(filepath, "w") do file
+          write(file, content)
+        end
+        files_created += 1
+      catch e
+        println("Warning: Could not create character file $filename")
+      end
+    end
+  end
+
+  # **NEW**: Clean up any orphaned files
+  cleanup_orphaned_files(output_dir, valid_filenames)
 
   println("Created $files_created markdown files in $output_dir")
   return files_created
@@ -511,7 +710,7 @@ function main()
       return
     end
 
-    # Create Obsidian vault
+    # Create Obsidian vault with enhanced link management
     files_created = create_obsidian_vault(words, character_type)
 
     println("\nProcessing complete!")
