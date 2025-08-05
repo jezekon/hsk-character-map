@@ -2,7 +2,7 @@
 
 When learning Chinese, it's often difficult to remember which words contain specific characters or how characters combine to form different meanings. Existing tools like [Pleco](https://www.pleco.com/) don't allow filtering by HSK levels or clearly show character relationships.
 
-This tool creates an interactive graphical dictionary for Obsidian that visualizes how Chinese characters connect across HSK vocabulary. By understanding these relationships, you can learn vocabulary faster - when you know one character, you can easily understand more complex words that use the same character.
+This tool creates an interactive graphical dictionary for [Obsidian](https://obsidian.md/) that visualizes how Chinese characters connect across HSK vocabulary. By understanding these relationships, you can learn vocabulary faster - when you know one character, you can easily understand more complex words that use the same character.
 
 ## How It Works
 
