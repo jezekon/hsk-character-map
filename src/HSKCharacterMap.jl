@@ -6,7 +6,7 @@ HSK Character Map - Enhanced Julia Implementation
 Creates a Chinese-English graphical dictionary for Obsidian by analyzing HSK vocabulary
 and generating character relationship connections with complete meaning aggregation.
 
-Enhanced with proper link management to avoid duplicate files and broken links.
+Enhanced with proper link management and substring detection for multi-character components.
 
 Usage:
 julia main.jl
@@ -20,6 +20,8 @@ Features:
   - Aggregates ALL meanings for each character from all word contexts
   - Creates character relationship graph
   - **NEW**: Proper standalone character detection to avoid broken links
+  - **ENHANCED**: Finds all possible substrings (not just individual characters)
+  - **ENHANCED**: Categorizes components by length (Individual Characters, Two-Character Words, etc.)
 """
 module HSKCharacterMap
 
@@ -64,6 +66,19 @@ struct CharacterInfo
   is_standalone_word::Bool
   filename::String
   meanings::CharacterMeanings
+end
+
+# **ENHANCED**: New structure for categorized components
+"""
+    ComponentConnection
+
+Represents a connection to a component with its category information.
+"""
+struct ComponentConnection
+  component::String
+  filename::String
+  length::Int
+  category::String
 end
 
 """
@@ -373,17 +388,42 @@ function create_filename(word::ChineseWord, character_type::String)
   return "$(main_chars) ($(word.pinyin)), $(word.pinyin_clean).md"
 end
 
+# **ENHANCED**: New function to find all possible substrings
 """
-    find_character_connections(target_word::ChineseWord, all_words::Vector{ChineseWord}, character_type::String) -> Vector{String}
+    generate_all_substrings(word_chars::String) -> Vector{String}
 
-Find all characters from target_word that exist as standalone words in the dictionary.
+Generate all possible contiguous substrings of a word, excluding the word itself.
+For example, "学习者" generates: ["学", "习", "者", "学习", "习者"]
 """
-function find_character_connections(
+function generate_all_substrings(word_chars::String)
+  characters = split_into_characters(word_chars)
+  n = length(characters)
+  substrings = String[]
+
+  # Generate all contiguous substrings
+  for length in 1:(n - 1)  # Exclude the full word itself
+    for start in 1:(n - length + 1)
+      substring = join(characters[start:(start + length - 1)])
+      push!(substrings, substring)
+    end
+  end
+
+  return unique(substrings)
+end
+
+# **ENHANCED**: Updated function to find all component connections
+"""
+    find_component_connections(target_word::ChineseWord, all_words::Vector{ChineseWord}, character_type::String) -> Vector{ComponentConnection}
+
+Find all components (characters and substrings) from target_word that exist as words in the dictionary.
+Returns categorized connections by component length.
+"""
+function find_component_connections(
   target_word::ChineseWord,
   all_words::Vector{ChineseWord},
   character_type::String
 )
-  connections = String[]
+  connections = ComponentConnection[]
 
   # Create a lookup dictionary for quick searching
   word_lookup = Dict{String, ChineseWord}()
@@ -392,19 +432,55 @@ function find_character_connections(
     word_lookup[lookup_chars] = word
   end
 
-  # Check each character of the target word
-  for char in target_word.characters
-    if haskey(word_lookup, char)
-      connected_word = word_lookup[char]
+  # Get the main characters for this word
+  main_chars =
+    character_type == "simplified" ? target_word.simplified : target_word.traditional
+
+  # Generate all possible substrings (excluding the word itself)
+  all_substrings = generate_all_substrings(main_chars)
+
+  # Check each substring to see if it exists as a word in the dictionary
+  for substring in all_substrings
+    if haskey(word_lookup, substring)
+      connected_word = word_lookup[substring]
       filename = create_filename(connected_word, character_type)
-      push!(connections, filename)
+
+      # Determine category based on length
+      component_length = length(split_into_characters(substring))
+      category = if component_length == 1
+        "Individual Characters"
+      elseif component_length == 2
+        "Two-Character Words"
+      elseif component_length == 3
+        "Three-Character Words"
+      else
+        "Multi-Character Words"
+      end
+
+      connection = ComponentConnection(substring, filename, component_length, category)
+      push!(connections, connection)
     end
   end
 
   return connections
 end
 
-# **NEW**: Enhanced link generation for proper character references
+"""
+    find_character_connections(target_word::ChineseWord, all_words::Vector{ChineseWord}, character_type::String) -> Vector{String}
+
+Find all characters from target_word that exist as standalone words in the dictionary.
+**LEGACY**: Maintained for backward compatibility, but now uses enhanced algorithm.
+"""
+function find_character_connections(
+  target_word::ChineseWord,
+  all_words::Vector{ChineseWord},
+  character_type::String
+)
+  # Use enhanced function and extract filenames for backward compatibility
+  component_connections = find_component_connections(target_word, all_words, character_type)
+  return [conn.filename for conn in component_connections]
+end
+
 """
     get_character_link(char::String, char_info_map::Dict{String, CharacterInfo}) -> String
 
@@ -431,6 +507,7 @@ end
     create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String, char_meanings_map::Dict{String, CharacterMeanings}) -> String
 
 Create markdown content for a word file with HSK level tag and enhanced meanings.
+**LEGACY**: Maintained for backward compatibility.
 """
 function create_markdown_content(
   word::ChineseWord,
@@ -482,17 +559,25 @@ function create_markdown_content(
   return content
 end
 
-# **NEW**: Enhanced markdown content creation with proper character links
 """
-    create_enhanced_markdown_content(word::ChineseWord, char_info_map::Dict{String, CharacterInfo}, character_type::String) -> String
+    create_markdown_content(word::ChineseWord, all_words::Vector{ChineseWord}, char_info_map::Dict{String, CharacterInfo}, character_type::String) -> String
 
-Create markdown content with enhanced character links to avoid broken references.
+Create markdown content with categorized component links while preserving original behavior.
+Shows ALL individual characters PLUS categorized component words that exist in dictionary.
 """
-function create_enhanced_markdown_content(
+function create_markdown_content(
   word::ChineseWord,
+  all_words::Vector{ChineseWord},
   char_info_map::Dict{String, CharacterInfo},
   character_type::String
 )
+  # Create word lookup for getting meanings
+  word_lookup = Dict{String, ChineseWord}()
+  for w in all_words
+    lookup_chars = character_type == "simplified" ? w.simplified : w.traditional
+    word_lookup[lookup_chars] = w
+  end
+
   # HSK level tag
   content = "#hsk$(word.hsk_level)\n"
 
@@ -507,23 +592,59 @@ function create_enhanced_markdown_content(
     end
   end
 
-  # Add character components with proper links
+  # Show components for multi-character words
   main_chars = character_type == "simplified" ? word.simplified : word.traditional
   characters = split_into_characters(main_chars)
 
-  if length(characters) > 1  # Only show components for multi-character words
+  if length(characters) > 1
     content *= "\n\n## Character Components\n"
+
+    # Always show ALL individual characters (preserved original behavior)
+    content *= "### Individual Characters:\n"
     for char in characters
-      link = get_character_link(char, char_info_map)
-      if haskey(char_info_map, char)
-        char_info = char_info_map[char]
-        if char_info.is_standalone_word
-          content *= "- $link (standalone word)\n"
-        else
-          content *= "- $link (character component)\n"
-        end
+      # Get the link name without .md extension
+      if haskey(char_info_map, char) && char_info_map[char].is_standalone_word
+        char_word = word_lookup[char]
+        link_name = replace(char_info_map[char].filename, ".md" => "")
+        content *= "- [[$link_name]] ($(char_word.meaning))\n"
       else
-        content *= "- $link\n"
+        content *= "- [[$char]] (character component)\n"
+      end
+    end
+
+    # Find and categorize multi-character component words
+    component_connections = find_component_connections(word, all_words, character_type)
+
+    # Filter out individual characters (already shown above)
+    multi_char_connections = filter(conn -> conn.length > 1, component_connections)
+
+    if !isempty(multi_char_connections)
+      # Group connections by category (excluding Individual Characters)
+      connections_by_category = Dict{String, Vector{ComponentConnection}}()
+      for conn in multi_char_connections
+        if !haskey(connections_by_category, conn.category)
+          connections_by_category[conn.category] = ComponentConnection[]
+        end
+        push!(connections_by_category[conn.category], conn)
+      end
+
+      # Sort categories by component length for logical display order
+      category_order =
+        ["Two-Character Words", "Three-Character Words", "Multi-Character Words"]
+
+      for category in category_order
+        if haskey(connections_by_category, category)
+          content *= "### $category:\n"
+          # Sort components within each category
+          sorted_connections =
+            sort(connections_by_category[category], by = x -> x.component)
+          for conn in sorted_connections
+            # Create link without .md extension and add meaning
+            link_name = replace(conn.filename, ".md" => "")
+            component_word = word_lookup[conn.component]
+            content *= "- [[$link_name]] ($(component_word.meaning))\n"
+          end
+        end
       end
     end
   end
@@ -575,7 +696,7 @@ end
     create_obsidian_vault(words::Vector{ChineseWord}, character_type::String, output_dir::String = "ObsidianVault") -> Int
 
 Create Obsidian vault with markdown files for all words and their character connections.
-Enhanced to include comprehensive character meanings and proper link management.
+Enhanced to include comprehensive character meanings, proper link management, and categorized components.
 """
 function create_obsidian_vault(
   words::Vector{ChineseWord},
@@ -591,17 +712,14 @@ function create_obsidian_vault(
   # **NEW**: Build enhanced character info map for proper link management
   char_info_map = build_character_info_map(words, character_type)
 
-  # Also build original character meanings map for backward compatibility
-  char_meanings_map = build_character_meanings_map(words, character_type)
-
   println("Generating markdown files...")
   files_created = 0
   valid_filenames = Set{String}()
 
   # Generate files for all words (including standalone characters)
   for word in words
-    # **NEW**: Use enhanced content creation with proper character links
-    content = create_enhanced_markdown_content(word, char_info_map, character_type)
+    # Use enhanced content creation with categorized components
+    content = create_markdown_content(word, words, char_info_map, character_type)
     filename = create_filename(word, character_type)
     filepath = joinpath(output_dir, filename)
 
@@ -710,7 +828,7 @@ function main()
       return
     end
 
-    # Create Obsidian vault with enhanced link management
+    # Create Obsidian vault with enhanced link management and categorized components
     files_created = create_obsidian_vault(words, character_type)
 
     println("\nProcessing complete!")
