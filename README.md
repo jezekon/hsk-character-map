@@ -26,8 +26,8 @@ This creates a web of connections that helps you understand how characters combi
 
 ## Visual Example
 <div align="center">
-<img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="80%">
-</div>When you open the vault in Obsidian's Graph View, you'll see:
+<img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="90%">
+</div>
 
 ## How to Use
 
