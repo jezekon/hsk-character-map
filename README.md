@@ -1,1 +1,95 @@
-# hsk-character-map
+# HSK Character Map
+
+An interactive Chinese-English graphical dictionary for Obsidian that visualizes character relationships within HSK vocabulary levels.
+
+## Motivation
+
+When learning Chinese, I often encounter a character and struggle to recall which words it was part of. While tools like [Pleco](https://www.pleco.com/) exist for character lookup, they don't allow filtering vocabulary by HSK levels and don't clearly show how words relate to each other.
+
+Chinese, like Vietnamese, has a fascinating property where complex words are often built from simpler components. Understanding these character relationships can dramatically accelerate vocabulary acquisition - when you learn one character, you can build upon it to understand more complex words around the same concept.
+
+This project was inspired by [Vietnamese Language Graph](https://github.com/DavidASix/vietnamese-language-graph), which visualizes compound word relationships in Vietnamese. I realized something similar could be created for Chinese characters using Obsidian's powerful graph visualization capabilities.
+
+## How It Works
+
+The tool analyzes HSK vocabulary to find character relationships and creates interconnected markdown files. For example:
+
+**学习** (xué xí) - "to study" contains:
+- **学** (xué) - "to study; school" 
+- **习** (xí) - "to practice; habit"
+
+Both individual characters also appear in other words:
+- **学生** (xué shēng) - "student" 
+- **练习** (liàn xí) - "to practice; exercise"
+
+This creates a web of connections that helps you understand how characters combine and recombine to form different meanings.
+
+## Visual Example
+
+When you open the vault in Obsidian's Graph View, you'll see:
+
+```
+学 ←→ 学习 ←→ 习
+↓              ↓
+学生          练习
+↓              ↓
+生            练
+```
+
+Each connection represents a shared character, making it easy to explore related vocabulary.
+
+## How to Use
+
+### Option 1: Download Pre-built Obsidian Vaults (Recommended)
+
+1. Go to the [Releases](../../releases) page
+2. Download the vault for your desired HSK level(s):
+   - `HSK-1-Traditional.zip` / `HSK-1-Simplified.zip`
+   - `HSK-1-4-Traditional.zip` / `HSK-1-4-Simplified.zip`
+   - etc.
+3. Extract the zip file
+4. Open Obsidian → "Open folder as vault"
+5. Select the extracted directory
+6. Switch to Graph View to visualize character relationships
+
+### Option 2: Generate Custom Vault with Julia Script
+
+For developers or those wanting specific HSK level combinations:
+
+1. **Prerequisites**: Julia 1.11+ with JSON package
+2. **Data**: Ensure HSK JSON files are in `data/hsk_raw/` directory
+3. **Run**: Execute `julia main.jl` and follow the prompts to select:
+   - HSK levels (e.g., `1-4`, `1,3,5`, or `6`)
+   - Character type (traditional or simplified)
+4. **Open**: Use the generated `ObsidianVault` directory in Obsidian
+
+## Output Structure
+
+Each word generates a markdown file with:
+- HSK level tags (`#hsk1`, `#hsk2`, etc.)
+- English meanings
+- Character component links organized by:
+  - Individual Characters
+  - Two-Character Words  
+  - Three-Character Words
+  - Multi-Character Words
+
+**Example**: `學習 (xué xí), xuexi.md`
+```markdown
+#hsk1
+to study; to learn
+
+## Character Components
+### Individual Characters:
+- [[學 (xué), xue]] (to study; school)
+- [[習 (xí), xi]] (to practice; habit)
+
+### Two-Character Words:
+- [[練習 (liàn xí), lianxi]] (to practice; exercise)
+```
+
+## Acknowledgments
+
+- Inspired by [Vietnamese Language Graph](https://github.com/DavidASix/vietnamese-language-graph) by DavidASix
+- HSK vocabulary data from [Complete HSK Vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary)
+
