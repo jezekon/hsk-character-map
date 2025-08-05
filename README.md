@@ -1,14 +1,8 @@
 # HSK Character Map
 
-An interactive Chinese-English graphical dictionary for Obsidian that visualizes character relationships within HSK vocabulary levels.
+When learning Chinese, it's often difficult to remember which words contain specific characters or how characters combine to form different meanings. Existing tools like [Pleco](https://www.pleco.com/) don't allow filtering by HSK levels or clearly show character relationships.
 
-## Motivation
-
-When learning Chinese, I often encounter a character and struggle to recall which words it was part of. While tools like [Pleco](https://www.pleco.com/) exist for character lookup, they don't allow filtering vocabulary by HSK levels and don't clearly show how words relate to each other.
-
-Chinese, like Vietnamese, has a fascinating property where complex words are often built from simpler components. Understanding these character relationships can dramatically accelerate vocabulary acquisition - when you learn one character, you can build upon it to understand more complex words around the same concept.
-
-This project was inspired by [Vietnamese Language Graph](https://github.com/DavidASix/vietnamese-language-graph), which visualizes compound word relationships in Vietnamese. I realized something similar could be created for Chinese characters using Obsidian's powerful graph visualization capabilities.
+This tool creates an interactive graphical dictionary for Obsidian that visualizes how Chinese characters connect across HSK vocabulary. By understanding these relationships, you can learn vocabulary faster - when you know one character, you can easily understand more complex words that use the same character.
 
 ## How It Works
 
@@ -26,7 +20,7 @@ This creates a web of connections that helps you understand how characters combi
 
 ## Visual Example
 <div align="center">
-<img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="90%">
+<img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="100%">
 </div>
 
 ## How to Use
