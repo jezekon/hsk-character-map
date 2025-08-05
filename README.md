@@ -25,18 +25,9 @@ Both individual characters also appear in other words:
 This creates a web of connections that helps you understand how characters combine and recombine to form different meanings.
 
 ## Visual Example
-
-When you open the vault in Obsidian's Graph View, you'll see:
-
-```
-学 ←→ 学习 ←→ 习
-↓              ↓
-学生          练习
-↓              ↓
-生            练
-```
-
-Each connection represents a shared character, making it easy to explore related vocabulary.
+<div align="center">
+<img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="80%">
+</div>When you open the vault in Obsidian's Graph View, you'll see:
 
 ## How to Use
 
