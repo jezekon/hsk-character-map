@@ -41,7 +41,7 @@ This creates a web of connections that helps you understand how characters combi
 
 For developers or those wanting specific HSK level combinations:
 
-1. **Prerequisites**: Julia 1.11+ with JSON package
+1. **Prerequisites**: [Julia](https://julialang.org/) 1.11+ with JSON package
 2. **Data**: Ensure HSK JSON files are in `data/hsk_raw/` directory
 3. **Run**: Execute `julia main.jl` and follow the prompts to select:
    - HSK levels (e.g., `1-4`, `1,3,5`, or `6`)
