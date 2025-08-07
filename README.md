@@ -1,34 +1,33 @@
 # HSK Character Map
 
-When learning Chinese, it's often difficult to remember which words contain specific characters or how individual characters influence the final meaning of words. Existing tools like Pleco are good for analyzing individual words, but they lack HSK level filtering and don't clearly show character relationships, which can be quite overwhelming for students.
+When learning Chinese, it's hard to remember which words share the same characters. You might know that 学 means "study", but it's not obvious that this same character appears in 学生 (student), 大学 (university), and 学习 (to study). Traditional dictionaries show you one word at a time. This tool shows you how characters connect across your entire HSK vocabulary, making it easier to spot patterns and learn related words together.
 
-This tool creates an interactive graphical dictionary for [Obsidian](https://obsidian.md/) that visualizes how Chinese characters connect across HSK vocabulary. By understanding these relationships, you can learn vocabulary faster - when you know one character, you can easily understand more complex words that use the same character.
+**Features:**
+- HSK levels 1-7 support
+- Traditional and simplified characters
+- Visual connections using [Obsidian](https://obsidian.md/) graph view
+- Markdown files with translations, character breakdowns and cross-links
 
-## How It Works
-
-The tool analyzes HSK vocabulary to find character relationships and creates interconnected markdown files. For example:
-
-**学习** (xué xí) - "to study" contains:
-- **学** (xué) - "to study; school" 
-- **习** (xí) - "to practice; habit"
-
-Both individual characters also appear in other words:
-- **学生** (xué shēng) - "student" 
-- **练习** (liàn xí) - "to practice; exercise"
-
-This creates a web of connections that helps you understand how characters combine and recombine to form different meanings.
+This tool creates an interactive dictionary for [Obsidian](https://obsidian.md/) that turns your HSK vocabulary into an interactive map. Open any word and see all the related words that share its characters. You learn connections, not just individual words.
 
 ## Visual Example
 <div align="center">
 <img src="doc/Obsidian_screenshot.png" alt="HSK Character Map in Obsidian Graph View" width="100%">
 </div>
 
+## How It Works
+Take the word **学习** (to study). It contains two characters that also appear in other words:
+- **学** appears in 学生 (student) and 大学 (university)  
+- **习** appears in 练习 (practice) and 习惯 (habit)
+
+The tool finds these connections and creates clickable links between related words. This helps you see patterns and learn vocabulary groups instead of isolated words.
+
 ## How to Use
 
 ### Option 1: Download Pre-built Obsidian Vaults (Recommended)
 
 1. Go to the [Releases](../../releases) page
-2. Download the vault for your desired HSK level(s), for example::
+2. Download the vault for your desired HSK level(s), for example:
    - `HSK-1-4-Traditional.zip` / `HSK-1-4-Simplified.zip`
 3. Extract the zip file
 4. Open Obsidian → "Open folder as vault"
@@ -70,11 +69,11 @@ university student
 ## Character Components
 ### Individual Characters:
 - [[大 (dà), da]] (big; large; great)
-- [[學 (xué), xue]] (to learn)
+- [[学 (xué), xue]] (to learn)
 - [[生 (shēng), sheng]] (to be born)
 ### Two-Character Words:
-- [[大學 (Dà xué), daxue]] (the Great Learning, one of the Four Books 四书 in Confucianism)
-- [[學生 (xué sheng), xuesheng]] (student)
+- [[大学 (Dà xué), daxue]] (the Great Learning, one of the Four Books 四书 in Confucianism)
+- [[学生 (xué sheng), xuesheng]] (student)
 ```
 
 ## Acknowledgments
