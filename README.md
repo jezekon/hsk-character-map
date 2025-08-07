@@ -20,8 +20,7 @@ Take the word **学习** (to study). It contains two characters that also appear
 - **学** appears in 学生 (student) and 大学 (university)  
 - **习** appears in 练习 (practice) and 习惯 (habit)
 
-The tool finds these connections and creates clickable links between related words. This helps you see patterns and learn vocabulary groups instead of isolated words.
-
+The tool finds these connections and creates clickable links between related words.
 ## How to Use
 
 ### Option 1: Download Pre-built Obsidian Vaults (Recommended)
