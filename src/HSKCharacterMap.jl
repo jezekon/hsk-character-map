@@ -268,7 +268,11 @@ end
 Split a Chinese word into individual characters.
 """
 function split_into_characters(word::String)
-    return [string(char) for char in word if !isspace(char)]
+    # Filtrovat pouze čínské znaky (Unicode range pro CJK znaky)
+    return [
+        string(char) for char in word if !isspace(char) && (0x4E00 <= Int(char) <= 0x9FFF ||  # CJK Unified Ideographs
+                           0x3400 <= Int(char) <= 0x4DBF)
+    ]    # CJK Extension A
 end
 
 """
@@ -556,7 +560,13 @@ function create_markdown_content(
     end
 
     # HSK/TOCFL level tag
-    level_tag = replace(lowercase(word.hsk_level), "-" => "")
+    level_tag = if startswith(word.hsk_level, "TOCFL")
+        # Pro TOCFL: "TOCFL-L1" -> "tocfl-L1" (pouze TOCFL na lowercase)
+        replace(word.hsk_level, "TOCFL" => "tocfl")
+    else
+        # Pro HSK: "HSK1" -> "hsk1"
+        replace(lowercase(word.hsk_level), "-" => "")
+    end
     content = "#$(level_tag)\n"
 
     # Primary meaning
@@ -575,7 +585,8 @@ function create_markdown_content(
     characters = split_into_characters(main_chars)
 
     if length(characters) > 1
-        content *= "\n\n## Character Components\n"
+        separator = isempty(word.meaning) ? "\n" : "\n\n"
+        content *= "$(separator)## Character Components\n"
 
         # Always show ALL individual characters (preserved original behavior)
         content *= "### Individual Characters:\n"

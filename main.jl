@@ -54,24 +54,24 @@ Convert TOCFL data dictionary to ChineseWord structure.
 function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
     # Convert SubString to String explicitly
     vocab = String(tocfl_data["vocabulary"])
+
+    # NOVÉ: Odstranit hranaté závorky a jejich obsah z vocabulary
+    vocab = replace(vocab, r"\[.*?\]" => "")
+
     pinyin = String(tocfl_data["pinyin"])
     pos = String(tocfl_data["parts_of_speech"])
     level_code = String(tocfl_data["level"])
     context = isnothing(tocfl_data["context"]) ? nothing : String(tocfl_data["context"])
 
-    # Create meaning from parts of speech
-    meaning = if !isnothing(context)
-        "$pos [Context: $context]"
-    else
-        pos
-    end
+    # ZMĚNA: Prázdný meaning místo zobrazování POS a contextu
+    meaning = ""
 
     pinyin_clean = HSKCharacterMap.clean_pinyin(pinyin)
     characters = HSKCharacterMap.split_into_characters(vocab)
 
     # TOCFL uses traditional characters
     traditional = vocab
-    simplified = vocab  # TODO: Could add simplified conversion if needed
+    simplified = vocab
 
     return HSKCharacterMap.ChineseWord(
         simplified,
@@ -79,9 +79,9 @@ function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
         pinyin,
         pinyin_clean,
         meaning,
-        [meaning],
+        [meaning],  # ZMĚNA: prázdný meaning
         characters,
-        "TOCFL-$(level_code)",  # Level as string, e.g. "TOCFL-N1"
+        "tocfl-$(level_code)",  # např. "tocfl-L1"
     )
 end
 
@@ -196,7 +196,7 @@ function main()
             println("  - Filter HSK: tag:#hsk1 or tag:#hsk2")
         end
         if source != :hsk
-            println("  - Filter TOCFL: tag:#tocfln1 or tag:#tocfll1")
+            println("  - Filter TOCFL: tag:#tocfl-N1 or tag:#tocfl-L1")
         end
 
     catch e
