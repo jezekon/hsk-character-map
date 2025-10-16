@@ -52,16 +52,13 @@ end
 Convert TOCFL data dictionary to ChineseWord structure.
 """
 function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
-    # Convert SubString to String explicitly
-    vocab = String(tocfl_data["vocabulary"])
+    # Convert SubString to String explicitly and remove brackets with content
+    vocab = String(strip(replace(String(tocfl_data["vocabulary"]), r"\[.*?\]" => "")))
+    pinyin = String(strip(replace(String(tocfl_data["pinyin"]), r"\[.*?\]" => "")))
 
-    # NOVÉ: Odstranit hranaté závorky a jejich obsah z vocabulary
-    vocab = replace(vocab, r"\[.*?\]" => "")
-
-    pinyin = String(tocfl_data["pinyin"])
-    pos = String(tocfl_data["parts_of_speech"])
+    # pos = String(tocfl_data["parts_of_speech"])
     level_code = String(tocfl_data["level"])
-    context = isnothing(tocfl_data["context"]) ? nothing : String(tocfl_data["context"])
+    # context = isnothing(tocfl_data["context"]) ? nothing : String(tocfl_data["context"])
 
     # ZMĚNA: Prázdný meaning místo zobrazování POS a contextu
     meaning = ""
@@ -79,9 +76,9 @@ function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
         pinyin,
         pinyin_clean,
         meaning,
-        [meaning],  # ZMĚNA: prázdný meaning
+        [meaning],
         characters,
-        "tocfl-$(level_code)",  # např. "tocfl-L1"
+        "tocfl-$(level_code)",
     )
 end
 

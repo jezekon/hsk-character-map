@@ -56,7 +56,6 @@ struct CharacterMeanings
     hsk_levels::Vector{String}  # Changed to String to support both HSK and TOCFL levels
 end
 
-# **NEW**: Enhanced character info for proper link management
 """
     CharacterInfo
 
@@ -69,7 +68,6 @@ struct CharacterInfo
     meanings::CharacterMeanings
 end
 
-# **ENHANCED**: New structure for categorized components
 """
     ComponentConnection
 
@@ -231,22 +229,27 @@ function clean_pinyin(pinyin::String)
         'á' => 'a',
         'ǎ' => 'a',
         'à' => 'a',
+        'ă' => 'a',  # Alternative 3rd tone (U+0103)
         'ē' => 'e',
         'é' => 'e',
         'ě' => 'e',
         'è' => 'e',
+        'ĕ' => 'e',  # Alternative 3rd tone (U+0115)
         'ī' => 'i',
         'í' => 'i',
         'ǐ' => 'i',
         'ì' => 'i',
+        'ĭ' => 'i',  # Alternative 3rd tone (U+012D)
         'ō' => 'o',
         'ó' => 'o',
         'ǒ' => 'o',
         'ò' => 'o',
+        'ŏ' => 'o',  # Alternative 3rd tone (U+014F)
         'ū' => 'u',
         'ú' => 'u',
         'ǔ' => 'u',
         'ù' => 'u',
+        'ŭ' => 'u',  # Alternative 3rd tone (U+016D)
         'ü' => 'v',
         'ǘ' => 'v',
         'ǚ' => 'v',
@@ -363,7 +366,6 @@ function build_character_meanings_map(words::Vector{ChineseWord}, character_type
     return char_meanings_map
 end
 
-# **NEW**: Enhanced character info mapping for proper link management
 """
     build_character_info_map(words::Vector{ChineseWord}, character_type::String) -> Dict{String, CharacterInfo}
 
@@ -423,7 +425,6 @@ function create_filename(word::ChineseWord, character_type::String)
     return "$(chars_clean) ($(pinyin_clean)), $(pinyin_no_tones).md"
 end
 
-# **ENHANCED**: New function to find all possible substrings
 """
     generate_all_substrings(word_chars::String) -> Vector{String}
 
@@ -446,7 +447,6 @@ function generate_all_substrings(word_chars::String)
     return unique(substrings)
 end
 
-# **ENHANCED**: Updated function to find all component connections
 """
     find_component_connections(target_word::ChineseWord, all_words::Vector{ChineseWord}, character_type::String) -> Vector{ComponentConnection}
 
@@ -641,7 +641,6 @@ function create_markdown_content(
     return content
 end
 
-# **NEW**: Create content for non-standalone character files
 """
     create_character_markdown_content(char_info::CharacterInfo) -> String
 
@@ -652,7 +651,6 @@ function create_character_markdown_content(char_info::CharacterInfo)
     return content
 end
 
-# **NEW**: Cleanup orphaned files
 """
     cleanup_orphaned_files(output_dir::String, valid_filenames::Set{String})
 
@@ -698,7 +696,6 @@ function create_obsidian_vault(
         println("Created directory: $output_dir")
     end
 
-    # **NEW**: Build enhanced character info map for proper link management
     char_info_map = build_character_info_map(words, character_type)
 
     println("Generating markdown files...")
@@ -730,7 +727,6 @@ function create_obsidian_vault(
         end
     end
 
-    # **NEW**: Generate files for characters that are NOT standalone words
     for (char, char_info) in char_info_map
         if !char_info.is_standalone_word
             content = create_character_markdown_content(char_info)
@@ -750,7 +746,6 @@ function create_obsidian_vault(
         end
     end
 
-    # **NEW**: Clean up any orphaned files
     cleanup_orphaned_files(output_dir, valid_filenames)
 
     println("Created $files_created markdown files in $output_dir")
