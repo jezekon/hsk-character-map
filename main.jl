@@ -3,6 +3,7 @@
 # main.jl
 #
 # Main runner script with HSK and TOCFL support
+# Enhanced with duplicate handling - HSK takes precedence over TOCFL
 #
 # Usage:
 #   julia main.jl
@@ -15,6 +16,21 @@ include("src/TOCFLLoader.jl")
 
 using .HSKCharacterMap
 using .TOCFLLoader
+
+"""
+    print_warning(msg::String)
+
+Print warning message in yellow/orange color for potential issues.
+"""
+function print_warning(msg::String)
+    leading_newlines = length(match(r"^\n*", msg).match)
+    cleaned_msg = lstrip(msg, '\n')
+
+    if leading_newlines > 0
+        print("\n" ^ leading_newlines)
+    end
+    println("\e[1;33m⚠️  [WARNING] $(cleaned_msg)\e[0m")
+end
 
 """
     get_user_source_selection() -> Symbol
@@ -56,11 +72,9 @@ function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
     vocab = String(strip(replace(String(tocfl_data["vocabulary"]), r"\[.*?\]" => "")))
     pinyin = String(strip(replace(String(tocfl_data["pinyin"]), r"\[.*?\]" => "")))
 
-    # pos = String(tocfl_data["parts_of_speech"])
     level_code = String(tocfl_data["level"])
-    # context = isnothing(tocfl_data["context"]) ? nothing : String(tocfl_data["context"])
 
-    # ZMĚNA: Prázdný meaning místo zobrazování POS a contextu
+    # Empty meaning (TOCFL doesn't have English translations)
     meaning = ""
 
     pinyin_clean = HSKCharacterMap.clean_pinyin(pinyin)
@@ -80,6 +94,44 @@ function convert_tocfl_to_chinese_word(tocfl_data::Dict, character_type::String)
         characters,
         "tocfl-$(level_code)",
     )
+end
+
+"""
+    remove_duplicates!(all_words::Vector{HSKCharacterMap.ChineseWord}, character_type::String) -> Int
+
+Remove duplicate words between HSK and TOCFL, giving HSK priority.
+Returns the number of duplicates removed.
+"""
+function remove_duplicates!(
+    all_words::Vector{HSKCharacterMap.ChineseWord},
+    character_type::String,
+)
+    # Build set of HSK word characters for fast lookup
+    hsk_chars = Set{String}()
+    for word in all_words
+        if startswith(word.hsk_level, "HSK")
+            chars = character_type == "simplified" ? word.simplified : word.traditional
+            push!(hsk_chars, chars)
+        end
+    end
+
+    # Count TOCFL words before filtering
+    original_tocfl_count = count(w -> startswith(w.hsk_level, "tocfl"), all_words)
+
+    # Filter out TOCFL words that duplicate HSK words
+    filter!(all_words) do word
+        if startswith(word.hsk_level, "tocfl")
+            chars = character_type == "simplified" ? word.simplified : word.traditional
+            return !(chars in hsk_chars)
+        end
+        return true
+    end
+
+    # Count TOCFL words after filtering
+    new_tocfl_count = count(w -> startswith(w.hsk_level, "tocfl"), all_words)
+    duplicates_removed = original_tocfl_count - new_tocfl_count
+
+    return duplicates_removed
 end
 
 """
@@ -147,6 +199,23 @@ function main()
             end
         end
 
+        # Handle duplicates if both sources were loaded
+        if source == :both
+            print_warning(
+                "\nLoading both HSK and TOCFL data. HSK words take precedence over TOCFL for duplicate entries.",
+            )
+
+            duplicates_removed = remove_duplicates!(all_words, character_type)
+
+            if duplicates_removed > 0
+                println(
+                    "  Removed $duplicates_removed duplicate TOCFL words (already in HSK)",
+                )
+            else
+                println("  No duplicates found between HSK and TOCFL")
+            end
+        end
+
         # Validate we have data
         if isempty(all_words)
             println("\n❌ Error: No vocabulary words loaded")
@@ -177,7 +246,7 @@ function main()
         # Count by source
         if source == :both
             hsk_count = count(w -> startswith(w.hsk_level, "HSK"), all_words)
-            tocfl_count = count(w -> startswith(w.hsk_level, "TOCFL"), all_words)
+            tocfl_count = count(w -> startswith(w.hsk_level, "tocfl"), all_words)
             println("  HSK words: $hsk_count")
             println("  TOCFL words: $tocfl_count")
         end
