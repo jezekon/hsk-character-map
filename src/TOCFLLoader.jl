@@ -71,55 +71,75 @@ function get_user_tocfl_levels()
 end
 
 """
+    safe_string(val) -> String
+
+Safely convert cell value to string, handling missing/nothing values.
+"""
+function safe_string(val)
+    if ismissing(val) || isnothing(val)
+        return ""
+    end
+    return strip(string(val))
+end
+
+"""
     detect_format(sheet::XLSX.Worksheet) -> Symbol
 
-Detect if sheet has 3 or 4 columns.
+Detect if sheet has 3 or 4 columns by examining the header row.
 Returns :four_column or :three_column
 """
 function detect_format(sheet::XLSX.Worksheet)
-    # Check first row for headers
-    first_row_vals = []
+    # Read first row headers
+    headers = []
     for col = 1:5
         try
             val = sheet[1, col]
-            if !isnothing(val) && !isempty(string(val))
-                push!(first_row_vals, string(val))
+            header_str = safe_string(val)
+            if !isempty(header_str)
+                push!(headers, header_str)
             end
         catch
             break
         end
     end
 
-    # Look for "Context" or "任務領域" in headers
-    has_context = any(h -> occursin(r"Context|任務領域"i, h), first_row_vals)
+    # Check for 4-column format indicators
+    has_context = any(h -> occursin(r"任務領域|Context"i, h), headers)
 
-    return has_context || length(first_row_vals) >= 4 ? :four_column : :three_column
+    return (has_context || length(headers) >= 4) ? :four_column : :three_column
 end
 
 """
     parse_row_four_column(sheet, row_num) -> Union{Dict, Nothing}
 
-Parse row with format: Context | Vocabulary | Pinyin | Parts of Speech
+Parse row with 4-column format: Context | Vocabulary | Pinyin | Parts of Speech
 """
 function parse_row_four_column(sheet, row_num)
     try
-        context = sheet[row_num, 1]
-        vocab = sheet[row_num, 2]
-        pinyin = sheet[row_num, 3]
-        pos = sheet[row_num, 4]
+        context_val = sheet[row_num, 1]
+        vocab_val = sheet[row_num, 2]
+        pinyin_val = sheet[row_num, 3]
+        pos_val = sheet[row_num, 4]
+
+        vocab = safe_string(vocab_val)
+        pinyin = safe_string(pinyin_val)
+        pos = safe_string(pos_val)
+        context = safe_string(context_val)
 
         # Skip if vocabulary is empty
-        if isnothing(vocab) || isempty(strip(string(vocab)))
+        if isempty(vocab)
             return nothing
         end
 
         return Dict(
-            "vocabulary" => strip(string(vocab)),
-            "pinyin" => strip(string(pinyin)),
-            "parts_of_speech" => strip(string(pos)),
-            "context" => isnothing(context) ? nothing : strip(string(context)),
+            "vocabulary" => vocab,
+            "pinyin" => pinyin,
+            "parts_of_speech" => pos,
+            "context" => isempty(context) ? nothing : context,
         )
-    catch
+    catch e
+        # Debug output for problematic rows
+        # println("Warning: Error parsing row $row_num (4-col): $e")
         return nothing
     end
 end
@@ -127,26 +147,32 @@ end
 """
     parse_row_three_column(sheet, row_num) -> Union{Dict, Nothing}
 
-Parse row with format: Vocabulary | Pinyin | Parts of Speech
+Parse row with 3-column format: Vocabulary | Pinyin | Parts of Speech
 """
 function parse_row_three_column(sheet, row_num)
     try
-        vocab = sheet[row_num, 1]
-        pinyin = sheet[row_num, 2]
-        pos = sheet[row_num, 3]
+        vocab_val = sheet[row_num, 1]
+        pinyin_val = sheet[row_num, 2]
+        pos_val = sheet[row_num, 3]
+
+        vocab = safe_string(vocab_val)
+        pinyin = safe_string(pinyin_val)
+        pos = safe_string(pos_val)
 
         # Skip if vocabulary is empty
-        if isnothing(vocab) || isempty(strip(string(vocab)))
+        if isempty(vocab)
             return nothing
         end
 
         return Dict(
-            "vocabulary" => strip(string(vocab)),
-            "pinyin" => strip(string(pinyin)),
-            "parts_of_speech" => strip(string(pos)),
+            "vocabulary" => vocab,
+            "pinyin" => pinyin,
+            "parts_of_speech" => pos,
             "context" => nothing,
         )
-    catch
+    catch e
+        # Debug output for problematic rows
+        # println("Warning: Error parsing row $row_num (3-col): $e")
         return nothing
     end
 end

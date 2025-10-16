@@ -22,6 +22,7 @@ Features:
   - **NEW**: Proper standalone character detection to avoid broken links
   - **ENHANCED**: Finds all possible substrings (not just individual characters)
   - **ENHANCED**: Categorizes components by length (Individual Characters, Two-Character Words, etc.)
+  - **FIXED**: Sanitizes filenames to prevent file system errors
 """
 module HSKCharacterMap
 
@@ -79,6 +80,26 @@ struct ComponentConnection
     filename::String
     length::Int
     category::String
+end
+
+"""
+    sanitize_filename_part(s::String) -> String
+
+Remove or replace characters that are invalid in filenames.
+"""
+function sanitize_filename_part(s::String)
+    s = replace(s, "/" => "-")
+    s = replace(s, "(" => "[")
+    s = replace(s, ")" => "]")
+    s = replace(s, ":" => "-")
+    s = replace(s, "*" => "")
+    s = replace(s, "?" => "")
+    s = replace(s, "\"" => "")
+    s = replace(s, "<" => "")
+    s = replace(s, ">" => "")
+    s = replace(s, "|" => "-")
+    s = replace(s, r"\s+" => " ")
+    return strip(s)
 end
 
 """
@@ -385,10 +406,17 @@ end
     create_filename(word::ChineseWord, character_type::String) -> String
 
 Create filename following the convention: [Characters] ([Pinyin with tones]), [Pinyin clean].md
+Now with filename sanitization.
 """
 function create_filename(word::ChineseWord, character_type::String)
     main_chars = character_type == "simplified" ? word.simplified : word.traditional
-    return "$(main_chars) ($(word.pinyin)), $(word.pinyin_clean).md"
+
+    # Sanitize each component
+    chars_clean = sanitize_filename_part(main_chars)
+    pinyin_clean = sanitize_filename_part(word.pinyin)
+    pinyin_no_tones = sanitize_filename_part(word.pinyin_clean)
+
+    return "$(chars_clean) ($(pinyin_clean)), $(pinyin_no_tones).md"
 end
 
 # **ENHANCED**: New function to find all possible substrings
@@ -509,65 +537,6 @@ function get_character_link(char::String, char_info_map::Dict{String,CharacterIn
 end
 
 """
-    create_markdown_content(word::ChineseWord, connections::Vector{String}, character_type::String, char_meanings_map::Dict{String, CharacterMeanings}) -> String
-
-Create markdown content for a word file with HSK level tag and enhanced meanings.
-**LEGACY**: Maintained for backward compatibility.
-"""
-function create_markdown_content(
-    word::ChineseWord,
-    connections::Vector{String},
-    character_type::String,
-    char_meanings_map::Dict{String,CharacterMeanings},
-)
-    main_chars = character_type == "simplified" ? word.simplified : word.traditional
-
-    # First line: HSK level tag
-    # hsk_tag = "#hsk$(word.hsk_level)"
-    # Extract level number from "HSK1" or "TOCFL-N1" format
-    level_tag = replace(lowercase(word.hsk_level), "-" => "")
-    hsk_tag = "#$(level_tag)"
-    content = "$(hsk_tag)\n"
-
-    # Second line: Traditional Chinese characters
-    # content *= "$(word.traditional)\n"
-
-    # Third line: Primary meaning
-    content *= "$(word.meaning)"
-
-    # If this is a single character, show all its aggregated meanings
-    if length(word.characters) == 1 && haskey(char_meanings_map, main_chars)
-        char_meanings = char_meanings_map[main_chars]
-        if length(char_meanings.all_meanings) > 1
-            content *= "\n\n### Meanings:\n"
-            for meaning in char_meanings.all_meanings
-                content *= "$meaning\n"
-            end
-        end
-    end
-
-    # Add word meanings if it's a multi-character word with multiple meanings
-    if length(word.characters) > 1 && length(word.all_meanings) > 1
-        content *= "\n\n### Word Meanings:\n"
-        for meaning in word.all_meanings
-            content *= "$meaning\n"
-        end
-    end
-
-    # Add connections if any exist
-    if !isempty(connections)
-        content *= "\n\n## Character Components\n"
-        for connection in connections
-            # Extract the character from the filename for display
-            char_part = split(connection, " (")[1]
-            content *= "- [[$char_part]]\n"
-        end
-    end
-
-    return content
-end
-
-"""
     create_markdown_content(word::ChineseWord, all_words::Vector{ChineseWord}, char_info_map::Dict{String, CharacterInfo}, character_type::String) -> String
 
 Create markdown content with categorized component links while preserving original behavior.
@@ -586,8 +555,9 @@ function create_markdown_content(
         word_lookup[lookup_chars] = w
     end
 
-    # HSK level tag
-    content = "#$(word.hsk_level)\n"
+    # HSK/TOCFL level tag
+    level_tag = replace(lowercase(word.hsk_level), "-" => "")
+    content = "#$(level_tag)\n"
 
     # Primary meaning
     content *= "$(word.meaning)"
