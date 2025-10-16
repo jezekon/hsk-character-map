@@ -560,9 +560,9 @@ function create_markdown_content(
     end
 
     # HSK/TOCFL level tag
-    level_tag = if startswith(word.hsk_level, "TOCFL")
-        # Pro TOCFL: "TOCFL-L1" -> "tocfl-L1" (pouze TOCFL na lowercase)
-        replace(word.hsk_level, "TOCFL" => "tocfl")
+    level_tag = if startswith(lowercase(word.hsk_level), "tocfl")
+        # Pro TOCFL: už je ve formátu "tocfl-L1", ponechat beze změny
+        word.hsk_level
     else
         # Pro HSK: "HSK1" -> "hsk1"
         replace(lowercase(word.hsk_level), "-" => "")
