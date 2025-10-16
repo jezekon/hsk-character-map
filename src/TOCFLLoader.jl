@@ -31,7 +31,7 @@ function get_user_tocfl_levels()
     for (i, (sheet_name, display_name, code)) in enumerate(TOCFL_LEVELS)
         println("  $i. $display_name")
     end
-    println("\nExamples: 1-4 | 1,3,5 | 5")
+    println("\nExamples: 1-4 | 1,3,5 | 7")
     print("Enter TOCFL levels to import: ")
 
     input = strip(readline())

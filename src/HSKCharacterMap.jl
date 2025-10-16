@@ -52,7 +52,7 @@ Aggregates all meanings for a specific character across all words.
 struct CharacterMeanings
     character::String
     all_meanings::Vector{String}
-    hsk_levels::Vector{Int}
+    hsk_levels::Vector{String}  # Changed to String to support both HSK and TOCFL levels
 end
 
 # **NEW**: Enhanced character info for proper link management
@@ -587,7 +587,7 @@ function create_markdown_content(
     end
 
     # HSK level tag
-    content = "#hsk$(word.hsk_level)\n"
+    content = "#$(word.hsk_level)\n"
 
     # Primary meaning
     content *= "$(word.meaning)"
