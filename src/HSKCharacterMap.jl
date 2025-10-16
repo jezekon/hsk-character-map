@@ -34,14 +34,14 @@ using JSON
 Represents a Chinese word with all its linguistic information including HSK level.
 """
 struct ChineseWord
-  simplified::String
-  traditional::String
-  pinyin::String
-  pinyin_clean::String
-  meaning::String
-  all_meanings::Vector{String}  # Store all meanings for this word
-  characters::Vector{String}
-  hsk_level::Int
+    simplified::String
+    traditional::String
+    pinyin::String
+    pinyin_clean::String
+    meaning::String
+    all_meanings::Vector{String}  # Store all meanings for this word
+    characters::Vector{String}
+    hsk_level::String
 end
 
 """
@@ -50,9 +50,9 @@ end
 Aggregates all meanings for a specific character across all words.
 """
 struct CharacterMeanings
-  character::String
-  all_meanings::Vector{String}
-  hsk_levels::Vector{Int}
+    character::String
+    all_meanings::Vector{String}
+    hsk_levels::Vector{Int}
 end
 
 # **NEW**: Enhanced character info for proper link management
@@ -62,10 +62,10 @@ end
 Enhanced character information including standalone word detection.
 """
 struct CharacterInfo
-  character::String
-  is_standalone_word::Bool
-  filename::String
-  meanings::CharacterMeanings
+    character::String
+    is_standalone_word::Bool
+    filename::String
+    meanings::CharacterMeanings
 end
 
 # **ENHANCED**: New structure for categorized components
@@ -75,10 +75,10 @@ end
 Represents a connection to a component with its category information.
 """
 struct ComponentConnection
-  component::String
-  filename::String
-  length::Int
-  category::String
+    component::String
+    filename::String
+    length::Int
+    category::String
 end
 
 """
@@ -88,47 +88,47 @@ Prompt user to select which HSK levels to import (1-7).
 Supports formats like: 1-4, 1,3,5, 6
 """
 function get_user_hsk_levels()
-  println("HSK Character Map - Level Selection")
-  println("Available HSK levels: 1-7")
-  println("Examples: 1-4 | 1,3,5 | 6")
-  print("Enter HSK levels to import: ")
+    println("HSK Character Map - Level Selection")
+    println("Available HSK levels: 1-7")
+    println("Examples: 1-4 | 1,3,5 | 6")
+    print("Enter HSK levels to import: ")
 
-  input = strip(readline())
-  levels = Int[]
+    input = strip(readline())
+    levels = Int[]
 
-  try
-    if contains(input, "-")
-      # Range format (e.g., "1-4")
-      parts = split(input, "-")
-      if length(parts) == 2
-        start_level = parse(Int, strip(parts[1]))
-        end_level = parse(Int, strip(parts[2]))
-        levels = collect(start_level:end_level)
-      end
-    elseif contains(input, ",")
-      # Comma-separated format (e.g., "1,3,5")
-      parts = split(input, ",")
-      levels = [parse(Int, strip(part)) for part in parts]
-    else
-      # Single level (e.g., "6")
-      levels = [parse(Int, strip(input))]
+    try
+        if contains(input, "-")
+            # Range format (e.g., "1-4")
+            parts = split(input, "-")
+            if length(parts) == 2
+                start_level = parse(Int, strip(parts[1]))
+                end_level = parse(Int, strip(parts[2]))
+                levels = collect(start_level:end_level)
+            end
+        elseif contains(input, ",")
+            # Comma-separated format (e.g., "1,3,5")
+            parts = split(input, ",")
+            levels = [parse(Int, strip(part)) for part in parts]
+        else
+            # Single level (e.g., "6")
+            levels = [parse(Int, strip(input))]
+        end
+
+        # Validate levels are between 1-7
+        levels = filter(level -> level >= 1 && level <= 7, levels)
+
+        if isempty(levels)
+            println("Error: No valid HSK levels selected. Using default: 1-4")
+            levels = [1, 2, 3, 4]
+        end
+
+    catch e
+        println("Error parsing input. Using default: 1-4")
+        levels = [1, 2, 3, 4]
     end
 
-    # Validate levels are between 1-7
-    levels = filter(level -> level >= 1 && level <= 7, levels)
-
-    if isempty(levels)
-      println("Error: No valid HSK levels selected. Using default: 1-4")
-      levels = [1, 2, 3, 4]
-    end
-
-  catch e
-    println("Error parsing input. Using default: 1-4")
-    levels = [1, 2, 3, 4]
-  end
-
-  println("Selected HSK levels: $(join(levels, ", "))")
-  return sort(unique(levels))
+    println("Selected HSK levels: $(join(levels, ", "))")
+    return sort(unique(levels))
 end
 
 """
@@ -138,20 +138,20 @@ Prompt user to choose between traditional or simplified characters.
 Returns "traditional" or "simplified".
 """
 function get_user_character_type()
-  println("\nCharacter Type Selection")
-  println("1 - Traditional (default)")
-  println("2 - Simplified")
-  print("Select character type (1-2): ")
+    println("\nCharacter Type Selection")
+    println("1 - Traditional (default)")
+    println("2 - Simplified")
+    print("Select character type (1-2): ")
 
-  input = strip(readline())
+    input = strip(readline())
 
-  if input == "2"
-    println("Selected: Simplified characters")
-    return "simplified"
-  else
-    println("Selected: Traditional characters")
-    return "traditional"
-  end
+    if input == "2"
+        println("Selected: Simplified characters")
+        return "simplified"
+    else
+        println("Selected: Traditional characters")
+        return "traditional"
+    end
 end
 
 """
@@ -160,16 +160,16 @@ end
 Load HSK data for a specific level from JSON file.
 """
 function load_hsk_data(level::Int)
-  if level < 1 || level > 7
-    throw(ArgumentError("HSK level must be between 1 and 7, got $level"))
-  end
+    if level < 1 || level > 7
+        throw(ArgumentError("HSK level must be between 1 and 7, got $level"))
+    end
 
-  filename = "data/hsk_raw/$level.json"
-  if !isfile(filename)
-    throw(SystemError("Data file not found: $filename"))
-  end
+    filename = "data/hsk_raw/$level.json"
+    if !isfile(filename)
+        throw(SystemError("Data file not found: $filename"))
+    end
 
-  return JSON.parsefile(filename)
+    return JSON.parsefile(filename)
 end
 
 """
@@ -178,21 +178,21 @@ end
 Load and combine HSK data for selected levels with level tracking.
 """
 function load_selected_hsk_data(levels::Vector{Int})
-  all_data = Tuple{Dict, Int}[]
+    all_data = Tuple{Dict,Int}[]
 
-  for level in levels
-    try
-      level_data = load_hsk_data(level)
-      level_tuples = [(word_data, level) for word_data in level_data]
-      append!(all_data, level_tuples)
-      println("Loaded HSK level $level: $(length(level_data)) words")
-    catch e
-      println("Warning: Could not load HSK level $level: $e")
+    for level in levels
+        try
+            level_data = load_hsk_data(level)
+            level_tuples = [(word_data, level) for word_data in level_data]
+            append!(all_data, level_tuples)
+            println("Loaded HSK level $level: $(length(level_data)) words")
+        catch e
+            println("Warning: Could not load HSK level $level: $e")
+        end
     end
-  end
 
-  println("Total: $(length(all_data)) words")
-  return all_data
+    println("Total: $(length(all_data)) words")
+    return all_data
 end
 
 """
@@ -201,44 +201,44 @@ end
 Remove tone marks and special characters from pinyin for use in filenames.
 """
 function clean_pinyin(pinyin::String)
-  # Remove punctuation and spaces
-  cleaned = replace(pinyin, r"[\s\.,;:!?\-()]" => "")
+    # Remove punctuation and spaces
+    cleaned = replace(pinyin, r"[\s\.,;:!?\-()]" => "")
 
-  # Define tone mark to base character mapping
-  tone_map = Dict(
-    'ā' => 'a',
-    'á' => 'a',
-    'ǎ' => 'a',
-    'à' => 'a',
-    'ē' => 'e',
-    'é' => 'e',
-    'ě' => 'e',
-    'è' => 'e',
-    'ī' => 'i',
-    'í' => 'i',
-    'ǐ' => 'i',
-    'ì' => 'i',
-    'ō' => 'o',
-    'ó' => 'o',
-    'ǒ' => 'o',
-    'ò' => 'o',
-    'ū' => 'u',
-    'ú' => 'u',
-    'ǔ' => 'u',
-    'ù' => 'u',
-    'ü' => 'v',
-    'ǘ' => 'v',
-    'ǚ' => 'v',
-    'ǜ' => 'v',
-    'ǖ' => 'v'
-  )
+    # Define tone mark to base character mapping
+    tone_map = Dict(
+        'ā' => 'a',
+        'á' => 'a',
+        'ǎ' => 'a',
+        'à' => 'a',
+        'ē' => 'e',
+        'é' => 'e',
+        'ě' => 'e',
+        'è' => 'e',
+        'ī' => 'i',
+        'í' => 'i',
+        'ǐ' => 'i',
+        'ì' => 'i',
+        'ō' => 'o',
+        'ó' => 'o',
+        'ǒ' => 'o',
+        'ò' => 'o',
+        'ū' => 'u',
+        'ú' => 'u',
+        'ǔ' => 'u',
+        'ù' => 'u',
+        'ü' => 'v',
+        'ǘ' => 'v',
+        'ǚ' => 'v',
+        'ǜ' => 'v',
+        'ǖ' => 'v',
+    )
 
-  result = ""
-  for char in cleaned
-    result *= get(tone_map, char, char)
-  end
+    result = ""
+    for char in cleaned
+        result *= get(tone_map, char, char)
+    end
 
-  return lowercase(result)
+    return lowercase(result)
 end
 
 """
@@ -247,7 +247,7 @@ end
 Split a Chinese word into individual characters.
 """
 function split_into_characters(word::String)
-  return [string(char) for char in word if !isspace(char)]
+    return [string(char) for char in word if !isspace(char)]
 end
 
 """
@@ -257,45 +257,45 @@ Parse a single HSK word entry from JSON data into a ChineseWord struct with HSK 
 Now extracts ALL meanings from the word data.
 """
 function parse_hsk_word(word_data::Dict, character_type::String, hsk_level::Int)
-  try
-    simplified = word_data["simplified"]
+    try
+        simplified = word_data["simplified"]
 
-    if !haskey(word_data, "forms") || isempty(word_data["forms"])
-      return nothing
+        if !haskey(word_data, "forms") || isempty(word_data["forms"])
+            return nothing
+        end
+
+        first_form = word_data["forms"][1]
+        traditional = first_form["traditional"]
+        pinyin = first_form["transcriptions"]["pinyin"]
+
+        # Get first meaning
+        meanings = first_form["meanings"]
+        if isempty(meanings)
+            return nothing
+        end
+
+        # Store all meanings and use first one as primary
+        all_meanings = copy(meanings)
+        primary_meaning = meanings[1]
+
+        pinyin_clean = clean_pinyin(pinyin)
+        main_characters = character_type == "simplified" ? simplified : traditional
+        characters = split_into_characters(main_characters)
+
+        return ChineseWord(
+            simplified,
+            traditional,
+            pinyin,
+            pinyin_clean,
+            primary_meaning,
+            all_meanings,
+            characters,
+            "HSK$(hsk_level)",
+        )
+
+    catch e
+        return nothing
     end
-
-    first_form = word_data["forms"][1]
-    traditional = first_form["traditional"]
-    pinyin = first_form["transcriptions"]["pinyin"]
-
-    # Get first meaning
-    meanings = first_form["meanings"]
-    if isempty(meanings)
-      return nothing
-    end
-
-    # Store all meanings and use first one as primary
-    all_meanings = copy(meanings)
-    primary_meaning = meanings[1]
-
-    pinyin_clean = clean_pinyin(pinyin)
-    main_characters = character_type == "simplified" ? simplified : traditional
-    characters = split_into_characters(main_characters)
-
-    return ChineseWord(
-      simplified,
-      traditional,
-      pinyin,
-      pinyin_clean,
-      primary_meaning,
-      all_meanings,
-      characters,
-      hsk_level
-    )
-
-  catch e
-    return nothing
-  end
 end
 
 """
@@ -305,34 +305,37 @@ Build a comprehensive mapping of each character to all its meanings across all w
 This aggregates meanings from different words that contain the same character.
 """
 function build_character_meanings_map(words::Vector{ChineseWord}, character_type::String)
-  char_meanings_map = Dict{String, CharacterMeanings}()
+    char_meanings_map = Dict{String,CharacterMeanings}()
 
-  println("Building character meanings map...")
+    println("Building character meanings map...")
 
-  for word in words
-    # Use the appropriate character set
-    word_chars = character_type == "simplified" ? word.simplified : word.traditional
+    for word in words
+        # Use the appropriate character set
+        word_chars = character_type == "simplified" ? word.simplified : word.traditional
 
-    # Process each character in this word
-    for char in split_into_characters(word_chars)
-      if haskey(char_meanings_map, char)
-        # Character already exists, merge meanings and levels
-        existing = char_meanings_map[char]
-        new_meanings = union(existing.all_meanings, word.all_meanings)
-        new_levels = union(existing.hsk_levels, [word.hsk_level])
+        # Process each character in this word
+        for char in split_into_characters(word_chars)
+            if haskey(char_meanings_map, char)
+                # Character already exists, merge meanings and levels
+                existing = char_meanings_map[char]
+                new_meanings = union(existing.all_meanings, word.all_meanings)
+                new_levels = union(existing.hsk_levels, [word.hsk_level])
 
-        char_meanings_map[char] =
-          CharacterMeanings(char, collect(new_meanings), sort(collect(new_levels)))
-      else
-        # First time seeing this character
-        char_meanings_map[char] =
-          CharacterMeanings(char, copy(word.all_meanings), [word.hsk_level])
-      end
+                char_meanings_map[char] = CharacterMeanings(
+                    char,
+                    collect(new_meanings),
+                    sort(collect(new_levels)),
+                )
+            else
+                # First time seeing this character
+                char_meanings_map[char] =
+                    CharacterMeanings(char, copy(word.all_meanings), [word.hsk_level])
+            end
+        end
     end
-  end
 
-  println("Mapped meanings for $(length(char_meanings_map)) unique characters")
-  return char_meanings_map
+    println("Mapped meanings for $(length(char_meanings_map)) unique characters")
+    return char_meanings_map
 end
 
 # **NEW**: Enhanced character info mapping for proper link management
@@ -343,39 +346,39 @@ Build comprehensive character information map with proper standalone word detect
 This prevents duplicate files and broken links.
 """
 function build_character_info_map(words::Vector{ChineseWord}, character_type::String)
-  char_info_map = Dict{String, CharacterInfo}()
+    char_info_map = Dict{String,CharacterInfo}()
 
-  # Build character meanings map first (reuse existing function)
-  char_meanings_map = build_character_meanings_map(words, character_type)
+    # Build character meanings map first (reuse existing function)
+    char_meanings_map = build_character_meanings_map(words, character_type)
 
-  # Create word lookup for fast standalone character detection
-  word_lookup = Set{String}()
-  word_to_word_map = Dict{String, ChineseWord}()
+    # Create word lookup for fast standalone character detection
+    word_lookup = Set{String}()
+    word_to_word_map = Dict{String,ChineseWord}()
 
-  for word in words
-    lookup_chars = character_type == "simplified" ? word.simplified : word.traditional
-    push!(word_lookup, lookup_chars)
-    word_to_word_map[lookup_chars] = word
-  end
-
-  # Process each character and determine if it's a standalone word
-  for (char, char_meanings) in char_meanings_map
-    is_standalone = char in word_lookup
-
-    filename = if is_standalone
-      standalone_word = word_to_word_map[char]
-      create_filename(standalone_word, character_type)
-    else
-      "$char.md"  # Simple filename for non-standalone characters
+    for word in words
+        lookup_chars = character_type == "simplified" ? word.simplified : word.traditional
+        push!(word_lookup, lookup_chars)
+        word_to_word_map[lookup_chars] = word
     end
 
-    char_info_map[char] = CharacterInfo(char, is_standalone, filename, char_meanings)
-  end
+    # Process each character and determine if it's a standalone word
+    for (char, char_meanings) in char_meanings_map
+        is_standalone = char in word_lookup
 
-  standalone_count = count(info -> info.is_standalone_word, values(char_info_map))
-  println("Mapped $(length(char_info_map)) characters ($standalone_count standalone)")
+        filename = if is_standalone
+            standalone_word = word_to_word_map[char]
+            create_filename(standalone_word, character_type)
+        else
+            "$char.md"  # Simple filename for non-standalone characters
+        end
 
-  return char_info_map
+        char_info_map[char] = CharacterInfo(char, is_standalone, filename, char_meanings)
+    end
+
+    standalone_count = count(info -> info.is_standalone_word, values(char_info_map))
+    println("Mapped $(length(char_info_map)) characters ($standalone_count standalone)")
+
+    return char_info_map
 end
 
 """
@@ -384,8 +387,8 @@ end
 Create filename following the convention: [Characters] ([Pinyin with tones]), [Pinyin clean].md
 """
 function create_filename(word::ChineseWord, character_type::String)
-  main_chars = character_type == "simplified" ? word.simplified : word.traditional
-  return "$(main_chars) ($(word.pinyin)), $(word.pinyin_clean).md"
+    main_chars = character_type == "simplified" ? word.simplified : word.traditional
+    return "$(main_chars) ($(word.pinyin)), $(word.pinyin_clean).md"
 end
 
 # **ENHANCED**: New function to find all possible substrings
@@ -396,19 +399,19 @@ Generate all possible contiguous substrings of a word, excluding the word itself
 For example, "学习者" generates: ["学", "习", "者", "学习", "习者"]
 """
 function generate_all_substrings(word_chars::String)
-  characters = split_into_characters(word_chars)
-  n = length(characters)
-  substrings = String[]
+    characters = split_into_characters(word_chars)
+    n = length(characters)
+    substrings = String[]
 
-  # Generate all contiguous substrings
-  for length in 1:(n - 1)  # Exclude the full word itself
-    for start in 1:(n - length + 1)
-      substring = join(characters[start:(start + length - 1)])
-      push!(substrings, substring)
+    # Generate all contiguous substrings
+    for length = 1:(n-1)  # Exclude the full word itself
+        for start = 1:(n-length+1)
+            substring = join(characters[start:(start+length-1)])
+            push!(substrings, substring)
+        end
     end
-  end
 
-  return unique(substrings)
+    return unique(substrings)
 end
 
 # **ENHANCED**: Updated function to find all component connections
@@ -419,50 +422,51 @@ Find all components (characters and substrings) from target_word that exist as w
 Returns categorized connections by component length.
 """
 function find_component_connections(
-  target_word::ChineseWord,
-  all_words::Vector{ChineseWord},
-  character_type::String
+    target_word::ChineseWord,
+    all_words::Vector{ChineseWord},
+    character_type::String,
 )
-  connections = ComponentConnection[]
+    connections = ComponentConnection[]
 
-  # Create a lookup dictionary for quick searching
-  word_lookup = Dict{String, ChineseWord}()
-  for word in all_words
-    lookup_chars = character_type == "simplified" ? word.simplified : word.traditional
-    word_lookup[lookup_chars] = word
-  end
-
-  # Get the main characters for this word
-  main_chars =
-    character_type == "simplified" ? target_word.simplified : target_word.traditional
-
-  # Generate all possible substrings (excluding the word itself)
-  all_substrings = generate_all_substrings(main_chars)
-
-  # Check each substring to see if it exists as a word in the dictionary
-  for substring in all_substrings
-    if haskey(word_lookup, substring)
-      connected_word = word_lookup[substring]
-      filename = create_filename(connected_word, character_type)
-
-      # Determine category based on length
-      component_length = length(split_into_characters(substring))
-      category = if component_length == 1
-        "Individual Characters"
-      elseif component_length == 2
-        "Two-Character Words"
-      elseif component_length == 3
-        "Three-Character Words"
-      else
-        "Multi-Character Words"
-      end
-
-      connection = ComponentConnection(substring, filename, component_length, category)
-      push!(connections, connection)
+    # Create a lookup dictionary for quick searching
+    word_lookup = Dict{String,ChineseWord}()
+    for word in all_words
+        lookup_chars = character_type == "simplified" ? word.simplified : word.traditional
+        word_lookup[lookup_chars] = word
     end
-  end
 
-  return connections
+    # Get the main characters for this word
+    main_chars =
+        character_type == "simplified" ? target_word.simplified : target_word.traditional
+
+    # Generate all possible substrings (excluding the word itself)
+    all_substrings = generate_all_substrings(main_chars)
+
+    # Check each substring to see if it exists as a word in the dictionary
+    for substring in all_substrings
+        if haskey(word_lookup, substring)
+            connected_word = word_lookup[substring]
+            filename = create_filename(connected_word, character_type)
+
+            # Determine category based on length
+            component_length = length(split_into_characters(substring))
+            category = if component_length == 1
+                "Individual Characters"
+            elseif component_length == 2
+                "Two-Character Words"
+            elseif component_length == 3
+                "Three-Character Words"
+            else
+                "Multi-Character Words"
+            end
+
+            connection =
+                ComponentConnection(substring, filename, component_length, category)
+            push!(connections, connection)
+        end
+    end
+
+    return connections
 end
 
 """
@@ -472,13 +476,14 @@ Find all characters from target_word that exist as standalone words in the dicti
 **LEGACY**: Maintained for backward compatibility, but now uses enhanced algorithm.
 """
 function find_character_connections(
-  target_word::ChineseWord,
-  all_words::Vector{ChineseWord},
-  character_type::String
+    target_word::ChineseWord,
+    all_words::Vector{ChineseWord},
+    character_type::String,
 )
-  # Use enhanced function and extract filenames for backward compatibility
-  component_connections = find_component_connections(target_word, all_words, character_type)
-  return [conn.filename for conn in component_connections]
+    # Use enhanced function and extract filenames for backward compatibility
+    component_connections =
+        find_component_connections(target_word, all_words, character_type)
+    return [conn.filename for conn in component_connections]
 end
 
 """
@@ -486,21 +491,21 @@ end
 
 Get the proper Obsidian link for a character, using the correct filename.
 """
-function get_character_link(char::String, char_info_map::Dict{String, CharacterInfo})
-  if haskey(char_info_map, char)
-    char_info = char_info_map[char]
-    if char_info.is_standalone_word
-      # Link to the full word file (without .md extension)
-      link_name = replace(char_info.filename, ".md" => "")
-      return "[[$(link_name)]]"
+function get_character_link(char::String, char_info_map::Dict{String,CharacterInfo})
+    if haskey(char_info_map, char)
+        char_info = char_info_map[char]
+        if char_info.is_standalone_word
+            # Link to the full word file (without .md extension)
+            link_name = replace(char_info.filename, ".md" => "")
+            return "[[$(link_name)]]"
+        else
+            # Link to simple character file
+            return "[[$(char)]]"
+        end
     else
-      # Link to simple character file
-      return "[[$(char)]]"
+        # Fallback - simple character link
+        return "[[$(char)]]"
     end
-  else
-    # Fallback - simple character link
-    return "[[$(char)]]"
-  end
 end
 
 """
@@ -510,53 +515,56 @@ Create markdown content for a word file with HSK level tag and enhanced meanings
 **LEGACY**: Maintained for backward compatibility.
 """
 function create_markdown_content(
-  word::ChineseWord,
-  connections::Vector{String},
-  character_type::String,
-  char_meanings_map::Dict{String, CharacterMeanings}
+    word::ChineseWord,
+    connections::Vector{String},
+    character_type::String,
+    char_meanings_map::Dict{String,CharacterMeanings},
 )
-  main_chars = character_type == "simplified" ? word.simplified : word.traditional
+    main_chars = character_type == "simplified" ? word.simplified : word.traditional
 
-  # First line: HSK level tag
-  hsk_tag = "#hsk$(word.hsk_level)"
-  content = "$(hsk_tag)\n"
+    # First line: HSK level tag
+    # hsk_tag = "#hsk$(word.hsk_level)"
+    # Extract level number from "HSK1" or "TOCFL-N1" format
+    level_tag = replace(lowercase(word.hsk_level), "-" => "")
+    hsk_tag = "#$(level_tag)"
+    content = "$(hsk_tag)\n"
 
-  # Second line: Traditional Chinese characters
-  # content *= "$(word.traditional)\n"
+    # Second line: Traditional Chinese characters
+    # content *= "$(word.traditional)\n"
 
-  # Third line: Primary meaning
-  content *= "$(word.meaning)"
+    # Third line: Primary meaning
+    content *= "$(word.meaning)"
 
-  # If this is a single character, show all its aggregated meanings
-  if length(word.characters) == 1 && haskey(char_meanings_map, main_chars)
-    char_meanings = char_meanings_map[main_chars]
-    if length(char_meanings.all_meanings) > 1
-      content *= "\n\n### Meanings:\n"
-      for meaning in char_meanings.all_meanings
-        content *= "$meaning\n"
-      end
+    # If this is a single character, show all its aggregated meanings
+    if length(word.characters) == 1 && haskey(char_meanings_map, main_chars)
+        char_meanings = char_meanings_map[main_chars]
+        if length(char_meanings.all_meanings) > 1
+            content *= "\n\n### Meanings:\n"
+            for meaning in char_meanings.all_meanings
+                content *= "$meaning\n"
+            end
+        end
     end
-  end
 
-  # Add word meanings if it's a multi-character word with multiple meanings
-  if length(word.characters) > 1 && length(word.all_meanings) > 1
-    content *= "\n\n### Word Meanings:\n"
-    for meaning in word.all_meanings
-      content *= "$meaning\n"
+    # Add word meanings if it's a multi-character word with multiple meanings
+    if length(word.characters) > 1 && length(word.all_meanings) > 1
+        content *= "\n\n### Word Meanings:\n"
+        for meaning in word.all_meanings
+            content *= "$meaning\n"
+        end
     end
-  end
 
-  # Add connections if any exist
-  if !isempty(connections)
-    content *= "\n\n## Character Components\n"
-    for connection in connections
-      # Extract the character from the filename for display
-      char_part = split(connection, " (")[1]
-      content *= "- [[$char_part]]\n"
+    # Add connections if any exist
+    if !isempty(connections)
+        content *= "\n\n## Character Components\n"
+        for connection in connections
+            # Extract the character from the filename for display
+            char_part = split(connection, " (")[1]
+            content *= "- [[$char_part]]\n"
+        end
     end
-  end
 
-  return content
+    return content
 end
 
 """
@@ -566,90 +574,90 @@ Create markdown content with categorized component links while preserving origin
 Shows ALL individual characters PLUS categorized component words that exist in dictionary.
 """
 function create_markdown_content(
-  word::ChineseWord,
-  all_words::Vector{ChineseWord},
-  char_info_map::Dict{String, CharacterInfo},
-  character_type::String
+    word::ChineseWord,
+    all_words::Vector{ChineseWord},
+    char_info_map::Dict{String,CharacterInfo},
+    character_type::String,
 )
-  # Create word lookup for getting meanings
-  word_lookup = Dict{String, ChineseWord}()
-  for w in all_words
-    lookup_chars = character_type == "simplified" ? w.simplified : w.traditional
-    word_lookup[lookup_chars] = w
-  end
-
-  # HSK level tag
-  content = "#hsk$(word.hsk_level)\n"
-
-  # Primary meaning
-  content *= "$(word.meaning)"
-
-  # Add all meanings if multiple exist
-  if length(word.all_meanings) > 1
-    content *= "\n\n### All meanings:\n"
-    for meaning in word.all_meanings
-      content *= "- $meaning\n"
-    end
-  end
-
-  # Show components for multi-character words
-  main_chars = character_type == "simplified" ? word.simplified : word.traditional
-  characters = split_into_characters(main_chars)
-
-  if length(characters) > 1
-    content *= "\n\n## Character Components\n"
-
-    # Always show ALL individual characters (preserved original behavior)
-    content *= "### Individual Characters:\n"
-    for char in characters
-      # Get the link name without .md extension
-      if haskey(char_info_map, char) && char_info_map[char].is_standalone_word
-        char_word = word_lookup[char]
-        link_name = replace(char_info_map[char].filename, ".md" => "")
-        content *= "- [[$link_name]] ($(char_word.meaning))\n"
-      else
-        content *= "- [[$char]] (character component)\n"
-      end
+    # Create word lookup for getting meanings
+    word_lookup = Dict{String,ChineseWord}()
+    for w in all_words
+        lookup_chars = character_type == "simplified" ? w.simplified : w.traditional
+        word_lookup[lookup_chars] = w
     end
 
-    # Find and categorize multi-character component words
-    component_connections = find_component_connections(word, all_words, character_type)
+    # HSK level tag
+    content = "#hsk$(word.hsk_level)\n"
 
-    # Filter out individual characters (already shown above)
-    multi_char_connections = filter(conn -> conn.length > 1, component_connections)
+    # Primary meaning
+    content *= "$(word.meaning)"
 
-    if !isempty(multi_char_connections)
-      # Group connections by category (excluding Individual Characters)
-      connections_by_category = Dict{String, Vector{ComponentConnection}}()
-      for conn in multi_char_connections
-        if !haskey(connections_by_category, conn.category)
-          connections_by_category[conn.category] = ComponentConnection[]
+    # Add all meanings if multiple exist
+    if length(word.all_meanings) > 1
+        content *= "\n\n### All meanings:\n"
+        for meaning in word.all_meanings
+            content *= "- $meaning\n"
         end
-        push!(connections_by_category[conn.category], conn)
-      end
-
-      # Sort categories by component length for logical display order
-      category_order =
-        ["Two-Character Words", "Three-Character Words", "Multi-Character Words"]
-
-      for category in category_order
-        if haskey(connections_by_category, category)
-          content *= "### $category:\n"
-          # Sort components within each category
-          sorted_connections =
-            sort(connections_by_category[category], by = x -> x.component)
-          for conn in sorted_connections
-            # Create link without .md extension and add meaning
-            link_name = replace(conn.filename, ".md" => "")
-            component_word = word_lookup[conn.component]
-            content *= "- [[$link_name]] ($(component_word.meaning))\n"
-          end
-        end
-      end
     end
-  end
 
-  return content
+    # Show components for multi-character words
+    main_chars = character_type == "simplified" ? word.simplified : word.traditional
+    characters = split_into_characters(main_chars)
+
+    if length(characters) > 1
+        content *= "\n\n## Character Components\n"
+
+        # Always show ALL individual characters (preserved original behavior)
+        content *= "### Individual Characters:\n"
+        for char in characters
+            # Get the link name without .md extension
+            if haskey(char_info_map, char) && char_info_map[char].is_standalone_word
+                char_word = word_lookup[char]
+                link_name = replace(char_info_map[char].filename, ".md" => "")
+                content *= "- [[$link_name]] ($(char_word.meaning))\n"
+            else
+                content *= "- [[$char]] (character component)\n"
+            end
+        end
+
+        # Find and categorize multi-character component words
+        component_connections = find_component_connections(word, all_words, character_type)
+
+        # Filter out individual characters (already shown above)
+        multi_char_connections = filter(conn -> conn.length > 1, component_connections)
+
+        if !isempty(multi_char_connections)
+            # Group connections by category (excluding Individual Characters)
+            connections_by_category = Dict{String,Vector{ComponentConnection}}()
+            for conn in multi_char_connections
+                if !haskey(connections_by_category, conn.category)
+                    connections_by_category[conn.category] = ComponentConnection[]
+                end
+                push!(connections_by_category[conn.category], conn)
+            end
+
+            # Sort categories by component length for logical display order
+            category_order =
+                ["Two-Character Words", "Three-Character Words", "Multi-Character Words"]
+
+            for category in category_order
+                if haskey(connections_by_category, category)
+                    content *= "### $category:\n"
+                    # Sort components within each category
+                    sorted_connections =
+                        sort(connections_by_category[category], by = x -> x.component)
+                    for conn in sorted_connections
+                        # Create link without .md extension and add meaning
+                        link_name = replace(conn.filename, ".md" => "")
+                        component_word = word_lookup[conn.component]
+                        content *= "- [[$link_name]] ($(component_word.meaning))\n"
+                    end
+                end
+            end
+        end
+    end
+
+    return content
 end
 
 # **NEW**: Create content for non-standalone character files
@@ -659,8 +667,8 @@ end
 Create markdown content for a character-only file (characters not found as standalone words).
 """
 function create_character_markdown_content(char_info::CharacterInfo)
-  content = "*Note: This character does not appear as a standalone word in the selected HSK levels.*\n\n"
-  return content
+    content = "*Note: This character does not appear as a standalone word in the selected HSK levels.*\n\n"
+    return content
 end
 
 # **NEW**: Cleanup orphaned files
@@ -670,26 +678,26 @@ end
 Remove any files that shouldn't exist (like empty character files when full files exist).
 """
 function cleanup_orphaned_files(output_dir::String, valid_filenames::Set{String})
-  if !isdir(output_dir)
-    return
-  end
-
-  removed_count = 0
-  for filename in readdir(output_dir)
-    if endswith(filename, ".md") && !(filename in valid_filenames)
-      filepath = joinpath(output_dir, filename)
-      try
-        rm(filepath)
-        removed_count += 1
-      catch e
-        # Silent cleanup
-      end
+    if !isdir(output_dir)
+        return
     end
-  end
 
-  if removed_count > 0
-    println("Removed $removed_count orphaned files")
-  end
+    removed_count = 0
+    for filename in readdir(output_dir)
+        if endswith(filename, ".md") && !(filename in valid_filenames)
+            filepath = joinpath(output_dir, filename)
+            try
+                rm(filepath)
+                removed_count += 1
+            catch e
+                # Silent cleanup
+            end
+        end
+    end
+
+    if removed_count > 0
+        println("Removed $removed_count orphaned files")
+    end
 end
 
 """
@@ -699,73 +707,73 @@ Create Obsidian vault with markdown files for all words and their character conn
 Enhanced to include comprehensive character meanings, proper link management, and categorized components.
 """
 function create_obsidian_vault(
-  words::Vector{ChineseWord},
-  character_type::String,
-  output_dir::String = "ObsidianVault"
+    words::Vector{ChineseWord},
+    character_type::String,
+    output_dir::String = "ObsidianVault",
 )
-  # Create output directory
-  if !isdir(output_dir)
-    mkdir(output_dir)
-    println("Created directory: $output_dir")
-  end
-
-  # **NEW**: Build enhanced character info map for proper link management
-  char_info_map = build_character_info_map(words, character_type)
-
-  println("Generating markdown files...")
-  files_created = 0
-  valid_filenames = Set{String}()
-
-  # Generate files for all words (including standalone characters)
-  for word in words
-    # Use enhanced content creation with categorized components
-    content = create_markdown_content(word, words, char_info_map, character_type)
-    filename = create_filename(word, character_type)
-    filepath = joinpath(output_dir, filename)
-
-    push!(valid_filenames, filename)
-
-    # Write file
-    try
-      open(filepath, "w") do file
-        write(file, content)
-      end
-      files_created += 1
-
-      # Show progress every 100 files
-      if files_created % 100 == 0
-        println("Created $files_created files...")
-      end
-    catch e
-      println("Warning: Could not create file $filename: $e")
+    # Create output directory
+    if !isdir(output_dir)
+        mkdir(output_dir)
+        println("Created directory: $output_dir")
     end
-  end
 
-  # **NEW**: Generate files for characters that are NOT standalone words
-  for (char, char_info) in char_info_map
-    if !char_info.is_standalone_word
-      content = create_character_markdown_content(char_info)
-      filename = char_info.filename
-      filepath = joinpath(output_dir, filename)
+    # **NEW**: Build enhanced character info map for proper link management
+    char_info_map = build_character_info_map(words, character_type)
 
-      push!(valid_filenames, filename)
+    println("Generating markdown files...")
+    files_created = 0
+    valid_filenames = Set{String}()
 
-      try
-        open(filepath, "w") do file
-          write(file, content)
+    # Generate files for all words (including standalone characters)
+    for word in words
+        # Use enhanced content creation with categorized components
+        content = create_markdown_content(word, words, char_info_map, character_type)
+        filename = create_filename(word, character_type)
+        filepath = joinpath(output_dir, filename)
+
+        push!(valid_filenames, filename)
+
+        # Write file
+        try
+            open(filepath, "w") do file
+                write(file, content)
+            end
+            files_created += 1
+
+            # Show progress every 100 files
+            if files_created % 100 == 0
+                println("Created $files_created files...")
+            end
+        catch e
+            println("Warning: Could not create file $filename: $e")
         end
-        files_created += 1
-      catch e
-        println("Warning: Could not create character file $filename")
-      end
     end
-  end
 
-  # **NEW**: Clean up any orphaned files
-  cleanup_orphaned_files(output_dir, valid_filenames)
+    # **NEW**: Generate files for characters that are NOT standalone words
+    for (char, char_info) in char_info_map
+        if !char_info.is_standalone_word
+            content = create_character_markdown_content(char_info)
+            filename = char_info.filename
+            filepath = joinpath(output_dir, filename)
 
-  println("Created $files_created markdown files in $output_dir")
-  return files_created
+            push!(valid_filenames, filename)
+
+            try
+                open(filepath, "w") do file
+                    write(file, content)
+                end
+                files_created += 1
+            catch e
+                println("Warning: Could not create character file $filename")
+            end
+        end
+    end
+
+    # **NEW**: Clean up any orphaned files
+    cleanup_orphaned_files(output_dir, valid_filenames)
+
+    println("Created $files_created markdown files in $output_dir")
+    return files_created
 end
 
 """
@@ -774,35 +782,35 @@ end
 Main function to load and process selected HSK data with HSK level tracking.
 """
 function process_hsk_data(levels::Vector{Int}, character_type::String)
-  println("Starting HSK Character Map generation...")
+    println("Starting HSK Character Map generation...")
 
-  # Load selected HSK data with level tracking
-  raw_data_with_levels = load_selected_hsk_data(levels)
+    # Load selected HSK data with level tracking
+    raw_data_with_levels = load_selected_hsk_data(levels)
 
-  if isempty(raw_data_with_levels)
-    throw(ErrorException("No HSK data could be loaded. Please check data files."))
-  end
-
-  # Parse into ChineseWord structs
-  println("Parsing word data...")
-  words = ChineseWord[]
-  skipped = 0
-
-  for (word_data, hsk_level) in raw_data_with_levels
-    parsed_word = parse_hsk_word(word_data, character_type, hsk_level)
-    if parsed_word !== nothing
-      push!(words, parsed_word)
-    else
-      skipped += 1
+    if isempty(raw_data_with_levels)
+        throw(ErrorException("No HSK data could be loaded. Please check data files."))
     end
-  end
 
-  println("Successfully parsed $(length(words)) words")
-  if skipped > 0
-    println("Skipped $skipped words due to parsing errors")
-  end
+    # Parse into ChineseWord structs
+    println("Parsing word data...")
+    words = ChineseWord[]
+    skipped = 0
 
-  return words
+    for (word_data, hsk_level) in raw_data_with_levels
+        parsed_word = parse_hsk_word(word_data, character_type, hsk_level)
+        if parsed_word !== nothing
+            push!(words, parsed_word)
+        else
+            skipped += 1
+        end
+    end
+
+    println("Successfully parsed $(length(words)) words")
+    if skipped > 0
+        println("Skipped $skipped words due to parsing errors")
+    end
+
+    return words
 end
 
 """
@@ -811,46 +819,46 @@ end
 Main entry point for the HSK Character Map generation.
 """
 function main()
-  println("HSK Character Map - Julia Implementation")
-  println("=======================================")
+    println("HSK Character Map - Julia Implementation")
+    println("=======================================")
 
-  try
-    # Get user preferences
-    levels = get_user_hsk_levels()
-    character_type = get_user_character_type()
+    try
+        # Get user preferences
+        levels = get_user_hsk_levels()
+        character_type = get_user_character_type()
 
-    # Process HSK data
-    words = process_hsk_data(levels, character_type)
+        # Process HSK data
+        words = process_hsk_data(levels, character_type)
 
-    if isempty(words)
-      println("Error: No words were successfully processed")
-      println("Please check that HSK data files exist in 'data/' directory")
-      return
+        if isempty(words)
+            println("Error: No words were successfully processed")
+            println("Please check that HSK data files exist in 'data/' directory")
+            return
+        end
+
+        # Create Obsidian vault with enhanced link management and categorized components
+        files_created = create_obsidian_vault(words, character_type)
+
+        println("\nProcessing complete!")
+        println("Obsidian vault created with $files_created files")
+        println("Character type: $(character_type)")
+        println("HSK levels: $(join(levels, ", "))")
+        println("\nNext steps:")
+        println("1. Open Obsidian")
+        println("2. Click 'Open folder as vault'")
+        println("3. Select the 'ObsidianVault' directory")
+        println("4. Open Graph View to see character connections")
+
+    catch e
+        println("Error during processing: $e")
+        println("Please check that the data files exist in the 'data/' directory")
+        println("Expected files: data/hsk_raw/1.json, data/hsk_raw/2.json, etc.")
     end
-
-    # Create Obsidian vault with enhanced link management and categorized components
-    files_created = create_obsidian_vault(words, character_type)
-
-    println("\nProcessing complete!")
-    println("Obsidian vault created with $files_created files")
-    println("Character type: $(character_type)")
-    println("HSK levels: $(join(levels, ", "))")
-    println("\nNext steps:")
-    println("1. Open Obsidian")
-    println("2. Click 'Open folder as vault'")
-    println("3. Select the 'ObsidianVault' directory")
-    println("4. Open Graph View to see character connections")
-
-  catch e
-    println("Error during processing: $e")
-    println("Please check that the data files exist in the 'data/' directory")
-    println("Expected files: data/hsk_raw/1.json, data/hsk_raw/2.json, etc.")
-  end
 end
 
 # Run main function if script is executed directly
 if abspath(PROGRAM_FILE) == @__FILE__
-  main()
+    main()
 end
 
 end # module HSKCharacterMap
