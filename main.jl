@@ -260,9 +260,11 @@ function main()
         println("\nSearch tips:")
         if source != :tocfl
             println("  - Filter HSK: tag:#hsk1 or tag:#hsk2")
+            println("  - Flashcards: tag:#flashcards/hsk1/words")
         end
         if source != :hsk
             println("  - Filter TOCFL: tag:#tocfl-N1 or tag:#tocfl-L1")
+            println("  - Flashcards: tag:#flashcards/tocfl-n1/words")
         end
 
     catch e

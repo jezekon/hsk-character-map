@@ -543,8 +543,7 @@ end
 """
     create_markdown_content(word::ChineseWord, all_words::Vector{ChineseWord}, char_info_map::Dict{String, CharacterInfo}, character_type::String) -> String
 
-Create markdown content with categorized component links while preserving original behavior.
-Shows ALL individual characters PLUS categorized component words that exist in dictionary.
+Create markdown content with flashcards and categorized component links.
 """
 function create_markdown_content(
     word::ChineseWord,
@@ -552,27 +551,34 @@ function create_markdown_content(
     char_info_map::Dict{String,CharacterInfo},
     character_type::String,
 )
-    # Create word lookup for getting meanings
     word_lookup = Dict{String,ChineseWord}()
     for w in all_words
         lookup_chars = character_type == "simplified" ? w.simplified : w.traditional
         word_lookup[lookup_chars] = w
     end
 
-    # HSK/TOCFL level tag
+    # Tags for HSK/TOCFL level + flashcards tag
     level_tag = if startswith(lowercase(word.hsk_level), "tocfl")
-        # Pro TOCFL: už je ve formátu "tocfl-L1", ponechat beze změny
         word.hsk_level
     else
-        # Pro HSK: "HSK1" -> "hsk1"
         replace(lowercase(word.hsk_level), "-" => "")
     end
-    content = "#$(level_tag)\n"
 
-    # Primary meaning
+    flashcard_tag = if startswith(lowercase(word.hsk_level), "tocfl")
+        level_code = replace(lowercase(word.hsk_level), "tocfl-" => "")
+        "tocfl-$level_code"
+    else
+        level_tag
+    end
+
+    content = "#$(level_tag) #flashcards/$(flashcard_tag)/words\n\n"
+
+    # Main word and meaning
+    main_chars = character_type == "simplified" ? word.simplified : word.traditional
+    content *= "$(main_chars)\n"
     content *= "$(word.meaning)"
 
-    # Add all meanings if multiple exist
+    # All meanings
     if length(word.all_meanings) > 1
         content *= "\n\n### All meanings:\n"
         for meaning in word.all_meanings
@@ -580,18 +586,22 @@ function create_markdown_content(
         end
     end
 
-    # Show components for multi-character words
-    main_chars = character_type == "simplified" ? word.simplified : word.traditional
+    # Flashcards section
+    if !isempty(word.meaning)
+        content *= "\n\n## Flashcards\n"
+        # Chinese → English
+        content *= "$(main_chars) ($(word.pinyin))::$(word.meaning)\n"
+        # English → Chinese
+        content *= "$(word.meaning)::$(main_chars) ($(word.pinyin))\n"
+    end
+
+    # Character Components
     characters = split_into_characters(main_chars)
-
     if length(characters) > 1
-        separator = isempty(word.meaning) ? "\n" : "\n\n"
-        content *= "$(separator)## Character Components\n"
+        content *= "\n## Character Components\n"
 
-        # Always show ALL individual characters (preserved original behavior)
         content *= "### Individual Characters:\n"
         for char in characters
-            # Get the link name without .md extension
             if haskey(char_info_map, char) && char_info_map[char].is_standalone_word
                 char_word = word_lookup[char]
                 link_name = replace(char_info_map[char].filename, ".md" => "")
@@ -601,14 +611,10 @@ function create_markdown_content(
             end
         end
 
-        # Find and categorize multi-character component words
         component_connections = find_component_connections(word, all_words, character_type)
-
-        # Filter out individual characters (already shown above)
         multi_char_connections = filter(conn -> conn.length > 1, component_connections)
 
         if !isempty(multi_char_connections)
-            # Group connections by category (excluding Individual Characters)
             connections_by_category = Dict{String,Vector{ComponentConnection}}()
             for conn in multi_char_connections
                 if !haskey(connections_by_category, conn.category)
@@ -617,18 +623,14 @@ function create_markdown_content(
                 push!(connections_by_category[conn.category], conn)
             end
 
-            # Sort categories by component length for logical display order
             category_order =
                 ["Two-Character Words", "Three-Character Words", "Multi-Character Words"]
-
             for category in category_order
                 if haskey(connections_by_category, category)
                     content *= "### $category:\n"
-                    # Sort components within each category
                     sorted_connections =
                         sort(connections_by_category[category], by = x -> x.component)
                     for conn in sorted_connections
-                        # Create link without .md extension and add meaning
                         link_name = replace(conn.filename, ".md" => "")
                         component_word = word_lookup[conn.component]
                         content *= "- [[$link_name]] ($(component_word.meaning))\n"
